@@ -56,4 +56,5 @@ PRIVATE
 target_link_libraries(run_speedtests
     dl
     Eigen3::Eigen
+    pthread
 )

@@ -24,7 +24,6 @@ public:
   run(const Eigen::Matrix<double, _nX, 1> & x)
   {
     Eigen::Matrix<autodiff::dual, _nX, 1> x_ad = x.template cast<autodiff::dual>();
-    Eigen::Matrix<autodiff::dual, _nX, 1> F;
 
     return autodiff::forward::jacobian(
       [this](const Eigen::Matrix<autodiff::dual, _nX, 1> & x)
@@ -32,8 +31,7 @@ public:
         return f(x);
       },
       autodiff::forward::wrt(x_ad),
-      autodiff::forward::at(x_ad),
-      F
+      autodiff::forward::at(x_ad)
     );
   }
 
@@ -46,7 +44,7 @@ template<typename T>
 class AutodiffFwdDynamicTester : public TestInterface<AutodiffFwdDynamicTester<T>, T>
 {
 public:
-  static constexpr char name[] = "AutodiffRevDynamicTester";
+  static constexpr char name[] = "AutodiffFwdDynamicTester";
 
   void setup(uint32_t)
   {}
@@ -54,7 +52,6 @@ public:
   Eigen::MatrixXd run(const Eigen::VectorXd & x)
   {
     Eigen::Matrix<autodiff::dual, -1, 1> x_ad = x.template cast<autodiff::dual>();
-    Eigen::Matrix<autodiff::dual, -1, 1> F;
 
     return autodiff::forward::jacobian(
       [this](const Eigen::Matrix<autodiff::dual, -1, 1> & x)
@@ -62,8 +59,7 @@ public:
         return f(x);
       },
       autodiff::forward::wrt(x_ad),
-      autodiff::forward::at(x_ad),
-      F
+      autodiff::forward::at(x_ad)
     );
   }
 
@@ -82,8 +78,7 @@ public:
 
   template<uint32_t _nX>
   void setup()
-  {
-  }
+  {}
 
   template<uint32_t _nX>
   Eigen::Matrix<double, _nX, _nX>
@@ -112,8 +107,7 @@ public:
   static constexpr char name[] = "AutodiffRevDynamicTester";
 
   void setup(uint32_t)
-  {
-  }
+  {}
 
   Eigen::MatrixXd run(const Eigen::VectorXd & x)
   {

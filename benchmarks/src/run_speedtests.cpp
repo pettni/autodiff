@@ -14,15 +14,27 @@
 template<template<typename> typename Tester, typename Test, uint32_t size>
 void run_speetest()
 {
+  if constexpr (
+    std::is_same_v<Tester<Test>, AutodiffRevStaticTester<BenchMark10>>||
+    std::is_same_v<Tester<Test>, AutodiffRevDynamicTester<BenchMark10>>)
+  {
+    // test too slow for a single iter
+    std::cout <<
+      std::left <<
+      std::setw(25) << Tester<Test>::name <<
+      "TIMEOUT" <<
+      std::endl;
+    return;
+  }
   Tester<Test> test;
-  auto res = test.template test_speed<size>(Tester<Test>::setup_iter, Tester<Test>::calc_iter);
+  auto res = test.template test_speed<size>();
   std::cout <<
     std::left <<
-    std::setw(30) << Tester<Test>::name <<
-    std::right <<
-    std::setw(15) << res.setup_time.count() <<
-    " " <<
-    std::setw(15) << res.calc_time.count() <<
+    std::setw(25) << Tester<Test>::name <<
+    std::right << std::setw(12) << res.setup_time.count() / res.setup_iter <<
+    std::right << std::setw(12) << res.setup_iter <<
+    std::right << std::setw(12) << res.calc_time.count() / res.calc_iter <<
+    std::right << std::setw(12) << res.calc_iter <<
     std::endl;
 }
 
@@ -42,8 +54,10 @@ void run_tests()
 {
   autodiff::detail::For<TestPack::size>(
     [](auto i) {
-      std::cout << "=== TestPack<" << i << "> (n=3) ===" << std::endl;
-      (run_speetest<Tester, typename TestPack::template type<i>, 3>(), ...);
+      std::cout << "=== TestPack<" << i << "> (n=2) ===" << std::endl;
+      (run_speetest<Tester, typename TestPack::template type<i>, 2>(), ...);
+      std::cout << "=== TestPack<" << i << "> (n=5) ===" << std::endl;
+      (run_speetest<Tester, typename TestPack::template type<i>, 5>(), ...);
       std::cout << "=== TestPack<" << i << "> (n=10) ===" << std::endl;
       (run_speetest<Tester, typename TestPack::template type<i>, 10>(), ...);
     });
@@ -53,6 +67,7 @@ void run_tests()
 int main()
 {
   using TestPack = TypePack<
+    BenchMark0,
     BenchMark1,
     BenchMark2,
     BenchMark3,

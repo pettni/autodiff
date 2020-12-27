@@ -10,8 +10,6 @@ class CppADCGTester : public TestInterface<CppADCGTester<T>, T>
 public:
   static constexpr char name[] = "CppADCGTester";
 
-  static constexpr uint32_t setup_iter = 10;  // run fewer, compilation takes a while
-
   void setup(uint32_t size)
   {
     Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic, 1> ax(size);
