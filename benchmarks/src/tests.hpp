@@ -7,6 +7,8 @@
 
 struct BenchMark0
 {
+  static constexpr char name[] = "BenchMark0";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -18,6 +20,8 @@ struct BenchMark0
 
 struct BenchMark1
 {
+  static constexpr char name[] = "BenchMark1";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -34,6 +38,8 @@ struct BenchMark1
 
 struct BenchMark2
 {
+  static constexpr char name[] = "BenchMark2";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -50,6 +56,8 @@ struct BenchMark2
 
 struct BenchMark3
 {
+  static constexpr char name[] = "BenchMark3";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -67,6 +75,8 @@ struct BenchMark3
 
 struct BenchMark4
 {
+  static constexpr char name[] = "BenchMark4";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -79,6 +89,8 @@ struct BenchMark4
 
 struct BenchMark5
 {
+  static constexpr char name[] = "BenchMark5";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -90,6 +102,8 @@ struct BenchMark5
 
 struct BenchMark6
 {
+  static constexpr char name[] = "BenchMark6";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -101,6 +115,8 @@ struct BenchMark6
 
 struct BenchMark7
 {
+  static constexpr char name[] = "BenchMark7";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -114,6 +130,8 @@ struct BenchMark7
 
 struct BenchMark8
 {
+  static constexpr char name[] = "BenchMark8";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -134,6 +152,8 @@ struct BenchMark8
 
 struct BenchMark9
 {
+  static constexpr char name[] = "BenchMark9";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
@@ -152,6 +172,8 @@ struct BenchMark9
 // Simulate numerical integration of an ODE using Euler
 struct BenchMark10
 {
+  static constexpr char name[] = "BenchMark10";
+
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const

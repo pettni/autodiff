@@ -14,10 +14,11 @@ TESTS
 
 TODO
 
-* Add ADEPT: http://www.met.rdg.ac.uk/clouds/adept/download.html
+* Add ADEPT: https://github.com/rjhogan/Adept-2
 * Bold-face winner in each test: https://stackoverflow.com/questions/29997096/bold-output-in-c
 * Simplify templating mess: no crtp, template setup() and run() on function instead of whole interface
 * Test that mimics robotic dynamics
+* Grab benchmarks from adept
 
 */
 
@@ -35,6 +36,7 @@ TODO
 
 struct SpeedResult
 {
+  bool setup_timeout, calc_timeout;
   uint64_t setup_iter{}, calc_iter{};
   std::chrono::nanoseconds setup_time{}, calc_time{};
 };
@@ -74,58 +76,68 @@ public:
   }
 
 
-  template<uint32_t size>
+  template<uint32_t _nX>
   SpeedResult test_speed()
   {
     SpeedResult res{};
 
     std::atomic<bool> canceled = false;
-    std::pair<std::size_t, std::chrono::nanoseconds> setup_res, calc_res;
+    std::promise<std::pair<std::size_t, std::chrono::nanoseconds>> setup_promise;
+    auto setup_ftr = setup_promise.get_future();
 
-    std::thread thr_setup(
-      [this, &canceled, &setup_res]() {
+    std::thread setup_thr(
+      [this, &canceled, &setup_promise, &res]() {
         std::size_t cntr = 0;
         const auto beg = std::chrono::high_resolution_clock::now();
         while (!canceled) {
-          static_cast<Derived &>(*this).template setup<size>();
+          static_cast<Derived &>(*this).template setup<_nX>();
           ++cntr;
         }
         const auto end = std::chrono::high_resolution_clock::now();
 
-        setup_res = std::make_pair(cntr, end - beg);
+        setup_promise.set_value(std::make_pair(cntr, end - beg));
       });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     canceled.store(true);
-    thr_setup.join();
 
+    if (setup_ftr.wait_for(std::chrono::milliseconds(500)) == std::future_status::ready) {
+      setup_thr.join();
+      std::tie(res.setup_iter, res.setup_time) = setup_ftr.get();
+    } else {
+      setup_thr.detach();
+      res.setup_timeout = true;
+      return res;
+    }
+
+    std::promise<std::pair<std::size_t, std::chrono::nanoseconds>> calc_promise;
+    auto calc_ftr = calc_promise.get_future();
     canceled.store(false);
-    std::thread calc_thr([this, &canceled, &calc_res]() {
-        std::size_t cntr = 0;
-        std::chrono::nanoseconds duration;
-
-        Eigen::Matrix<double, size, 1> x;
+    std::thread calc_thr([this, &canceled, &calc_promise]() {
+        Eigen::Matrix<double, _nX, 1> x;
         x.setOnes();
 
+        std::size_t cntr = 0;
         const auto beg = std::chrono::high_resolution_clock::now();
         while (!canceled) {
-          static_cast<Derived &>(*this).template run<size>(x);
+          static_cast<Derived &>(*this).template run<_nX>(x);
           ++cntr;
         }
         const auto end = std::chrono::high_resolution_clock::now();
-        duration = end - beg;
 
-        calc_res = std::make_pair(cntr, duration);
+        calc_promise.set_value(std::make_pair(cntr, end - beg));
       });
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     canceled.store(true);
-    calc_thr.join();
 
-    res.setup_iter = setup_res.first;
-    res.setup_time = setup_res.second;
-    res.calc_iter = calc_res.first;
-    res.calc_time = calc_res.second;
+    if (calc_ftr.wait_for(std::chrono::milliseconds(500)) == std::future_status::ready) {
+      calc_thr.join();
+      std::tie(res.calc_iter, res.calc_time) = calc_ftr.get();
+    } else {
+      calc_thr.detach();  // forceful termination
+      res.calc_timeout = true;
+    }
 
     return res;
   }
