@@ -120,9 +120,8 @@ struct BenchMark7
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
-    const auto sx = x.array().sin().eval();
-    const auto cx = x.array().cos().eval();
-    return (sx * sx - cx * cx).matrix();  // pow does not work for CppAD::cg::CG
+    // problems with pow (adolc) and array::operator* (adept)
+    return x.array().sin().matrix().cwiseAbs2() - x.array().cos().matrix().cwiseAbs2();
   }
 };
 

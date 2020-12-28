@@ -3,7 +3,10 @@ project(autodiff_benchmark)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_BUILD_TYPE Release)  # hardcoded release mode
+
+# hardcoded release mode
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 
 find_package(Eigen3 REQUIRED)
 
@@ -12,27 +15,52 @@ include(ExternalProject)
 set(LOCAL_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/local_install)
 file(MAKE_DIRECTORY ${LOCAL_INSTALL_DIR})
 
+
 if(SKIP_INSTALL_AD_TOOLS)
     # Add dummy targets
+    add_custom_target(adept-external-install)
     add_custom_target(adolc-external-install)
     add_custom_target(cppad-external-install)
     add_custom_target(cppad-cg-external-install)
 else()
+    # Download and install adept
+    set(CONFIGURE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} ${CMAKE_CXX11_STANDARD_COMPILE_OPTION}")
+
+    externalproject_add(
+        adept-external
+        URL                  http://www.met.reading.ac.uk/clouds/adept/adept-2.0.8.tar.gz
+        UPDATE_COMMAND       ""
+        UPDATE_DISCONNECTED  ON
+        # Need this patch to make adept work with Eigen (prevents ambiguous operator*)
+        PATCH_COMMAND        patch <SOURCE_DIR>/include/adept/BinaryOperation.h < ${CMAKE_CURRENT_SOURCE_DIR}/patch/adept_sfinae.patch
+        CONFIGURE_COMMAND    ${CMAKE_COMMAND} -E env
+                             CC=${CMAKE_C_COMPILER}
+                             CFLAGS=${CMAKE_C_FLAGS_RELEASE}
+                             CXX=${CMAKE_CXX_COMPILER}
+                             CXXFLAGS=${CONFIGURE_CXX_FLAGS}
+                             <SOURCE_DIR>/configure
+                             --prefix=${LOCAL_INSTALL_DIR}
+                             --disable-openmp
+        BUILD_IN_SOURCE      ON
+        EXCLUDE_FROM_ALL     ON
+    )
+    externalproject_add_steptargets(adept-external install)
+
     # Download and install adol-c
-    set(ADOLC_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX11_STANDARD_COMPILE_OPTION}")
     externalproject_add(
         adolc-external
         GIT_REPOSITORY       git@github.com:coin-or/ADOL-C.git
         GIT_TAG              releases/2.7.2
         GIT_SHALLOW          ON
         GIT_CONFIG           advice.detachedHead=false
+        UPDATE_COMMAND       ""
         UPDATE_DISCONNECTED  ON
         CONFIGURE_COMMAND    autoreconf -fi <SOURCE_DIR>
         COMMAND              ${CMAKE_COMMAND} -E env
                              CC=${CMAKE_C_COMPILER}
                              CFLAGS=${CMAKE_C_FLAGS_RELEASE}
                              CXX=${CMAKE_CXX_COMPILER}
-                             CXXFLAGS=${ADOLC_CXX_FLAGS}
+                             CXXFLAGS=${CONFIGURE_CXX_FLAGS}
                              <SOURCE_DIR>/configure
                              --prefix=${LOCAL_INSTALL_DIR}
                              --includedir=${LOCAL_INSTALL_DIR}/include
@@ -50,6 +78,7 @@ else()
         GIT_TAG              20200000.3
         GIT_SHALLOW          ON
         GIT_CONFIG           advice.detachedHead=false
+        UPDATE_COMMAND       ""
         UPDATE_DISCONNECTED  ON
         CMAKE_ARGS           -Dcppad_cxx_flags=${CMAKE_CXX11_STANDARD_COMPILE_OPTION}
                              -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
@@ -64,6 +93,7 @@ else()
         GIT_TAG              v2.4.3
         GIT_SHALLOW          ON
         GIT_CONFIG           advice.detachedHead=false
+        UPDATE_COMMAND       ""
         UPDATE_DISCONNECTED  ON
         CMAKE_ARGS           -DCPPAD_HOME=${LOCAL_INSTALL_DIR}/include
                              -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
@@ -80,6 +110,7 @@ add_executable(run_speedtests
     src/run_speedtests.cpp
 )
 add_dependencies(run_speedtests
+    adept-external-install
     adolc-external-install
     cppad-external-install
     cppad-cg-external-install
@@ -94,6 +125,7 @@ PRIVATE
     ${LOCAL_INSTALL_DIR}/lib
 )
 target_link_libraries(run_speedtests
+    adept
     adolc
     dl
     Eigen3::Eigen

@@ -1,5 +1,5 @@
-#ifndef TESTER_FUNCTIONS_HPP
-#define TESTER_FUNCTIONS_HPP
+#ifndef TESTER_UTILS_HPP
+#define TESTER_UTILS_HPP
 
 #include <Eigen/Core>
 
@@ -131,4 +131,4 @@ SpeedResult test_speed()
   return res;
 }
 
-#endif  // TESTER_FUNCTIONS_HPP
+#endif  // TESTER_UTILS_HPP

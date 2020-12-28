@@ -14,10 +14,8 @@ TESTS
 
 TODO
 
-* Add ADEPT: https://github.com/rjhogan/Adept-2
-* Bold-face winner in each test: https://stackoverflow.com/questions/29997096/bold-output-in-c
+* Output plots
 * Test that mimics robotic dynamics
-* Grab benchmarks from adept
 
 */
 
@@ -28,14 +26,16 @@ TODO
 #include <iomanip>
 #include <iostream>
 
+#include "adept_tester.hpp"
 #include "adolc_testers.hpp"
 #include "autodiff_testers.hpp"
-#include "cppadcg_tester.hpp"
 #include "cppad_tester.hpp"
+#include "cppadcg_tester.hpp"
 #include "numerical_tester.hpp"
-#include "tester_functions.hpp"
+#include "test_utils.hpp"
 
 #include "tests.hpp"
+
 
 
 template<typename Tester, typename Test, uint32_t size>
@@ -97,20 +97,21 @@ void run_tests()
 int main()
 {
   using TestPack = TypePack<
-    // BenchMark0,
-    // BenchMark1,
-    // BenchMark2,
-    // BenchMark3,
+    BenchMark0,
+    BenchMark1,
+    BenchMark2,
+    BenchMark3,
     BenchMark4,
     BenchMark5,
-    // BenchMark6,
-    // BenchMark7,
-    // BenchMark8,
-    // BenchMark9,
+    BenchMark6,
+    BenchMark7,
+    BenchMark8,
+    BenchMark9,
     BenchMark10
   >;
 
   using TesterPack = TypePack<
+    AdeptTester,
     AdolcTester,
     AutodiffFwdTester,
     AutodiffRevTester,
