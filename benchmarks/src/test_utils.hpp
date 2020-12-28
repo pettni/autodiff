@@ -37,11 +37,11 @@ bool test_correctness()
     tester2.run([&test](const auto & x) {return test(x);}, x, J2);
 
     if (!J1.isApprox(J2, 1e-6)) {
-      std::cout << "Different jacobians detected!" << std::endl;
-      std::cout << "Jacobian from " << Tester1::name << std::endl;
-      std::cout << J1 << std::endl;
-      std::cout << "Jacobian from " << Tester2::name << std::endl;
-      std::cout << J2 << std::endl;
+      std::cerr << "Different jacobians detected!" << std::endl;
+      std::cerr << "Jacobian from " << Tester1::name << std::endl;
+      std::cerr << J1 << std::endl;
+      std::cerr << "Jacobian from " << Tester2::name << std::endl;
+      std::cerr << J2 << std::endl;
       return false;
     }
   }
@@ -89,7 +89,7 @@ SpeedResult test_speed()
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   canceled.store(true);
 
-  if (setup_ftr.wait_for(std::chrono::milliseconds(500)) == std::future_status::ready) {
+  if (setup_ftr.wait_for(std::chrono::milliseconds(1000)) == std::future_status::ready) {
     setup_thr.join();
     std::tie(res.setup_iter, res.setup_time) = setup_ftr.get();
   } else {
@@ -117,10 +117,10 @@ SpeedResult test_speed()
       calc_promise.set_value(std::make_pair(cntr, end - beg));
     });
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
   canceled.store(true);
 
-  if (calc_ftr.wait_for(std::chrono::milliseconds(500)) == std::future_status::ready) {
+  if (calc_ftr.wait_for(std::chrono::milliseconds(1000)) == std::future_status::ready) {
     calc_thr.join();
     std::tie(res.calc_iter, res.calc_time) = calc_ftr.get();
   } else {

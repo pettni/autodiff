@@ -3,6 +3,8 @@
 
 #include <cppad/cppad.hpp>
 
+#include "common.hpp"
+
 
 class CppADTester
 {

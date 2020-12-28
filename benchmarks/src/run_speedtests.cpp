@@ -14,8 +14,32 @@ TESTS
 
 TODO
 
-* Output plots
-* Test that mimics robotic dynamics
+* Figure out how to handle tests with different (fixed) sizes
+* Refine the tests
+   - Constant function                    (variable input size)
+   - Diagonal operations only             (variable input size)
+   - Sum-reduction                        (variable input size)
+   - boost numerical integration          (variable input size)
+   - Shallow fully connected NN with loss (variable input size)
+   - Camera reprojection error            (fixed size)
+   - Differentiate SE3 lie group dynamics (fixed size)
+   - Integrate SE3 lie group dynamics     (vairable integration steps)
+
+OTHER BENCHMARKS
+
+* Adept benchmarks: https://github.com/rjhogan/Adept-2/tree/master/benchmark
+* 2015 paper w/ code: https://github.com/microsoft/ADBench
+  - Adept, ADOL-C, Ceres
+* Robotics dynamics: https://arxiv.org/abs/1709.03799
+  - CppAD, CppAD-CG
+
+AD TOOLS NOT IN BENCHMARK
+
+* boost::math::differentiation     (Seems incompatible with array math)
+* Enzime: https://enzyme.mit.edu/  (Clang compiler only)
+* Fadbad: http://www.fadbad.com    (Seems unmaintained)
+* Sacado                           (Website broken)
+* dco/c++                          (Non-free license)
 
 */
 
@@ -29,8 +53,8 @@ TODO
 #include "adept_tester.hpp"
 #include "adolc_testers.hpp"
 #include "autodiff_testers.hpp"
+#include "cppadcg_tester.hpp"  // must be before cppad_tester
 #include "cppad_tester.hpp"
-#include "cppadcg_tester.hpp"
 #include "numerical_tester.hpp"
 #include "test_utils.hpp"
 
@@ -44,7 +68,7 @@ void run_speedtest()
   auto res = test_speed<Tester, Test, size>();
 
   if (res.calc_timeout || res.setup_timeout) {
-    std::cout <<
+    std::cerr <<
       std::left << std::setw(20) << Tester::name <<
       std::right << std::setw(10) << "TIMEOUT (DETACHED)" <<
       std::endl;
@@ -54,11 +78,14 @@ void run_speedtest()
   // compare with numerical
   std::string name_str = Tester::name;
   if (!test_correctness<Tester, NumericalTester, Test, size>()) {
-    name_str += " (ERROR)";
+    std::cerr << Tester::name << " gave incorrect answer on " << Test::name << std::endl;
+    return;
   }
 
   std::cout <<
-    std::left << std::setw(20) << name_str <<
+    std::left << std::setw(20) << Tester::name <<
+    std::left << std::setw(20) << Test::name <<
+    std::left << std::setw(5) << size <<
     std::setprecision(2) <<
     std::right << std::setw(10) << std::scientific <<
     static_cast<double>(res.setup_time.count()) / res.setup_iter <<
@@ -83,12 +110,13 @@ void run_tests()
 {
   autodiff::detail::For<TestPack::size>(
     [](auto test_i) {
-      std::cout << "=== " << TestPack::template type<test_i>::name << " ===" << std::endl;
       autodiff::detail::For<TesterPack::size>(
         [ = ](auto tester_i) {
           using Tester = typename TesterPack::template type<tester_i>;
           using Test = typename TestPack::template type<test_i>;
-          run_speedtest<Tester, Test, 2>();
+          run_speedtest<Tester, Test, 3>();
+          run_speedtest<Tester, Test, 5>();
+          run_speedtest<Tester, Test, 10>();
         });
     });
 }
