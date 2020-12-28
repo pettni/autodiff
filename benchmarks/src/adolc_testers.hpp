@@ -3,97 +3,91 @@
 
 #define ADOLC_NO_TAPING
 
-
-#include "test_interface.hpp"
+#include <utility>
 
 #ifdef ADOLC_NO_TAPING
-#include <unsupported/Eigen/AdolcForward>
-#include "common.hpp"
 
-template<typename T>
-class AdolcTester : public TestInterface<AdolcTester<T>>
+# include <unsupported/Eigen/AdolcForward>
+# include "common.hpp"
+
+
+class AdolcTester
 {
 public:
   static constexpr char name[] = "ADOL-C-TAPELESS";
 
-  template<std::size_t _nX>
-  void setup()
+  template<typename Func, typename Derived>
+  void setup(Func &&, const Eigen::PlainObjectBase<Derived> & x)
   {
-    // can't get rid of annoying warning here...
-    if (adtl::getNumDir() != _nX) {
-      adtl::setNumDir(_nX);
+    if (adtl::getNumDir() != x.size()) {
+      adtl::setNumDir(x.size());
     }
   }
 
-  template<std::size_t _nX>
-  Eigen::Matrix<double, _nX, _nX>
-  run(const Eigen::Matrix<double, _nX, 1> & x)
+  template<typename Func, typename Derived>
+  void run(
+    Func && f,
+    const Eigen::PlainObjectBase<Derived> & x,
+    typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
-    Eigen::AdolcForwardJacobian<EigenFunctor<_nX, _nX, T>> func;
-    Eigen::Matrix<double, _nX, 1> y;
-    Eigen::Matrix<double, _nX, _nX> J;
-
+    Eigen::AdolcForwardJacobian func(EigenFunctor<Func, Derived>(std::forward<Func>(f)));
+    typename EigenFunctor<Func, Derived>::ValueType y;
     func(x, &y, &J);
-
-    return J;
   }
 };
 
 #else  // ADOLC_NO_TAPING
 
-#include <adolc/adolc.h>
+# include <adolc/adolc.h>
 
-template<typename T>
-class AdolcTester : public TestInterface<AdolcTester<T>>
+class AdolcTester
 {
 public:
   static constexpr char name[] = "ADOL-C";
 
-  template<std::size_t _nX>
-  void setup()
+  template<typename Func, typename Derived>
+  void setup(Func && f, const Eigen::PlainObjectBase<Derived> & x)
   {
     trace_on(0);
 
-    double * x = new double[_nX];
-    adouble * ax = new adouble[_nX];
-    double * y = new double[_nX];
-    adouble * ay = new adouble[_nX];
+    adouble * ax = new adouble[x.size()];
+    double * y = new double[x.size()];
+    adouble * ay = new adouble[x.size()];
 
-    for (size_t i = 0; i < _nX; i++) {
-      x[i] = 1;
-      ax[i] <<= x[i];
+    for (size_t i = 0; i < x.size(); i++) {
+      ax[i] <<= x(i);
     }
 
-    Eigen::Map<const Eigen::Matrix<adouble, _nX, 1>> ax_map(ax, _nX);
-    Eigen::Map<Eigen::Matrix<adouble, _nX, 1>>(ay, _nX) = T()(ax_map);
+    Eigen::Map<const Eigen::Matrix<adouble, -1, 1>> ax_map(ax, x.size());
+    Eigen::Map<Eigen::Matrix<adouble, -1, 1>>(ay, x.size()) = f(ax_map);
 
-    for (size_t i = 0; i < _nX; i++) {
+    for (size_t i = 0; i < x.size(); i++) {
       y[i] = 0;
       ay[i] >>= y[i];
     }
 
     trace_off();
 
-    delete[] x;
     delete[] ax;
     delete[] y;
     delete[] ay;
   }
 
-  template<std::size_t _nX>
-  Eigen::Matrix<double, _nX, _nX>
-  run(const Eigen::Matrix<double, _nX, 1> & x)
+  template<typename Func, typename Derived>
+  void run(
+    Func &&,
+    const Eigen::PlainObjectBase<Derived> & x,
+    typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
-    Eigen::Matrix<double, _nX, _nX, Eigen::RowMajor> J;
+    double ** rows = new double *[x.size()];
 
-    std::array<double *, _nX> rows;
-    for (size_t i = 0; i < _nX; i++) {
-      rows[i] = J.data() + _nX * i;
+    for (size_t i = 0; i < Derived::RowsAtCompileTime; i++) {
+      rows[i] = J.data() + Derived::RowsAtCompileTime * i;
     }
 
-    jacobian(0, _nX, _nX, x.data(), rows.data());
+    jacobian(0, Derived::RowsAtCompileTime, Derived::RowsAtCompileTime, x.data(), rows);
 
-    return J;
+    delete[] rows;
   }
 };
 

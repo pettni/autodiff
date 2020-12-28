@@ -1,7 +1,6 @@
 #ifndef SRC__TESTS_HPP_
 #define SRC__TESTS_HPP_
 
-
 #include <Eigen/Core>
 
 

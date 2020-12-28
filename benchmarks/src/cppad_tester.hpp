@@ -1,38 +1,35 @@
 #ifndef SRC__CPPAD_TESTER_HPP_
 #define SRC__CPPAD_TESTER_HPP_
 
-
 #include <cppad/cppad.hpp>
 
-#include "test_interface.hpp"
 
-template<typename T>
-class CppADTester : public TestInterface<CppADTester<T>>
+class CppADTester
 {
 public:
   static constexpr char name[] = "CppAD";
 
-  template<std::size_t _nX>
-  void setup()
+  template<typename Func, typename Derived>
+  void setup(Func && f, const Eigen::PlainObjectBase<Derived> & x)
   {
-    Eigen::Matrix<CppAD::AD<double>, Eigen::Dynamic, 1> ax(_nX);
-    ax.setOnes();
+    Eigen::Matrix<CppAD::AD<double>, Eigen::Dynamic, 1> ax = x.template cast<CppAD::AD<double>>();
 
     CppAD::Independent(ax);
-    Eigen::Matrix<CppAD::AD<double>, Eigen::Dynamic, 1> ay = T()(ax);
+    Eigen::Matrix<CppAD::AD<double>, Eigen::Dynamic, 1> ay = f(ax);
     f_ad = CppAD::ADFun<double>(ax, ay);
 
     f_ad.optimize();
   }
 
-  template<std::size_t _nX>
-  Eigen::Matrix<double, _nX, _nX>
-  run(const Eigen::Matrix<double, _nX, 1> & x)
+  template<typename Func, typename Derived>
+  void run(
+    Func &&,
+    const Eigen::PlainObjectBase<Derived> & x,
+    typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
-    Eigen::Matrix<double, _nX, _nX, Eigen::RowMajor> J;
     Eigen::VectorXd x_dyn = x;
-    Eigen::Map<Eigen::VectorXd>(J.data(), _nX * _nX) = f_ad.Jacobian(x_dyn);
-    return J;
+    Eigen::Map<Eigen::VectorXd>(J.data(), J.size()) = f_ad.Jacobian(x_dyn);
+    J.transposeInPlace();
   }
 
 private:

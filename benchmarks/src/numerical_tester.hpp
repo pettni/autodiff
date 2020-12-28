@@ -1,32 +1,30 @@
 #ifndef SRC__NUMERICAL_TESTER_HPP_
 #define SRC__NUMERICAL_TESTER_HPP_
 
-
 #include <unsupported/Eigen/NumericalDiff>
 
-#include "test_interface.hpp"
+#include <utility>
+
 #include "common.hpp"
 
 
-template<typename T>
-class NumericalTester : public TestInterface<NumericalTester<T>>
+class NumericalTester
 {
 public:
   static constexpr char name[] = "Numerical";
 
-  template<std::size_t _nX>
-  void setup()
+  template<typename Func, typename Derived>
+  void setup(Func &&, const Eigen::PlainObjectBase<Derived> &)
   {}
 
-  template<std::size_t _nX>
-  Eigen::Matrix<double, _nX, _nX> run(const Eigen::Matrix<double, _nX, 1> & x)
+  template<typename Func, typename Derived>
+  void run(
+    Func && f,
+    const Eigen::PlainObjectBase<Derived> & x,
+    typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
-    Eigen::NumericalDiff<EigenFunctor<_nX, _nX, T>> func;
-    Eigen::Matrix<double, _nX, _nX> J;
-
+    Eigen::NumericalDiff func(EigenFunctor<Func, Derived>(std::forward<Func>(f)));
     func.df(x, J);
-
-    return J;
   }
 };
 

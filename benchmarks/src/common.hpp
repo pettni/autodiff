@@ -3,32 +3,48 @@
 
 #include <Eigen/Core>
 
-template<std::size_t _nX, std::size_t _nY, typename T>
-struct EigenFunctor : public T
+#include <utility>
+
+
+template<typename _Func, typename _InputType>
+struct EigenFunctor
 {
-  using Scalar = double;
-  using InputType = Eigen::Matrix<double, _nX, 1>;
-  using ValueType = Eigen::Matrix<double, _nY, 1>;
-  static constexpr int InputsAtCompileTime = _nX;
-  static constexpr int ValuesAtCompileTime = _nY;
-  using JacobianType = Eigen::Matrix<double, _nY, _nX>;
+  using Scalar = typename _InputType::Scalar;
+  using InputType = _InputType;
+  using ValueType = std::invoke_result_t<_Func, InputType>;
+
+  static constexpr int InputsAtCompileTime = InputType::SizeAtCompileTime;
+  static constexpr int ValuesAtCompileTime = ValueType::SizeAtCompileTime;
+
+  using JacobianType = Eigen::Matrix<
+    Scalar, ValueType::SizeAtCompileTime, InputType::SizeAtCompileTime
+  >;
+
+  int values_ = ValueType::SizeAtCompileTime;  // must be changed for dynamic sizing
+
+  explicit EigenFunctor(_Func && func)
+  : func_(std::forward<_Func>(func))
+  {}
 
   int values() const
   {
-    return _nX;
+    return values_;
   }
 
   template<typename Derived1, typename Derived2>
   void operator()(const Eigen::MatrixBase<Derived1> & x, Eigen::MatrixBase<Derived2> * y) const
   {
-    *y = T::operator()(x);
+    * y = func_(x);
   }
 
   template<typename Derived1, typename Derived2>
   void operator()(const Eigen::MatrixBase<Derived1> & x, Eigen::MatrixBase<Derived2> & y) const
   {
-    y = T::operator()(x);
+    y = func_(x);
   }
+
+private:
+  _Func func_;
 };
 
 #endif  // SRC__COMMON_HPP_

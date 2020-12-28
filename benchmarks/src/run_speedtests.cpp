@@ -1,3 +1,26 @@
+/*
+TESTING RULES
+
+* Task: compute dense jacobians of function Rn -> Rn
+* Sizes known at compile time (benefits forward functions)
+* No multithreading (benefits autodiff which does not support it)
+* For tape methods employ any available optimization in the setup step
+
+TESTS
+
+* Support variable sized inputs, return same size output
+* Can assume all inputs are positive
+* No branching
+
+TODO
+
+* Add ADEPT: https://github.com/rjhogan/Adept-2
+* Bold-face winner in each test: https://stackoverflow.com/questions/29997096/bold-output-in-c
+* Test that mimics robotic dynamics
+* Grab benchmarks from adept
+
+*/
+
 #include <Eigen/Core>
 
 #include <autodiff/common/meta.hpp>
@@ -10,31 +33,27 @@
 #include "cppadcg_tester.hpp"
 #include "cppad_tester.hpp"
 #include "numerical_tester.hpp"
+#include "tester_functions.hpp"
 
 #include "tests.hpp"
 
 
-template<template<typename> typename Tester, typename Test, uint32_t size>
+template<typename Tester, typename Test, uint32_t size>
 void run_speedtest()
 {
-  Tester<Test> test;
-
-  // run the test
-  auto res = test.template test_speed<size>();
+  auto res = test_speed<Tester, Test, size>();
 
   if (res.calc_timeout || res.setup_timeout) {
     std::cout <<
-      std::left << std::setw(20) << Tester<Test>::name <<
+      std::left << std::setw(20) << Tester::name <<
       std::right << std::setw(10) << "TIMEOUT (DETACHED)" <<
       std::endl;
     return;
   }
 
   // compare with numerical
-  NumericalTester<Test> cmp;
-  bool correct = test.template compare_with<size>(cmp);
-  std::string name_str = Tester<Test>::name;
-  if (!correct) {
+  std::string name_str = Tester::name;
+  if (!test_correctness<Tester, NumericalTester, Test, size>()) {
     name_str += " (ERROR)";
   }
 
@@ -59,17 +78,18 @@ struct TypePack
 };
 
 
-template<typename TestPack, template<typename> typename ... Tester>
+template<typename TesterPack, typename TestPack>
 void run_tests()
 {
   autodiff::detail::For<TestPack::size>(
-    [](auto i) {
-      std::cout << "=== " << TestPack::template type<i>::name << " (n=2) ===" << std::endl;
-      (run_speedtest<Tester, typename TestPack::template type<i>, 2>(), ...);
-      std::cout << TestPack::template type<i>::name << " (n=5) ===" << std::endl;
-      (run_speedtest<Tester, typename TestPack::template type<i>, 5>(), ...);
-      std::cout << TestPack::template type<i>::name << " (n=10) ===" << std::endl;
-      (run_speedtest<Tester, typename TestPack::template type<i>, 10>(), ...);
+    [](auto test_i) {
+      std::cout << "=== " << TestPack::template type<test_i>::name << " ===" << std::endl;
+      autodiff::detail::For<TesterPack::size>(
+        [ = ](auto tester_i) {
+          using Tester = typename TesterPack::template type<tester_i>;
+          using Test = typename TestPack::template type<test_i>;
+          run_speedtest<Tester, Test, 2>();
+        });
     });
 }
 
@@ -81,8 +101,8 @@ int main()
     // BenchMark1,
     // BenchMark2,
     // BenchMark3,
-    // BenchMark4,
-    // BenchMark5,
+    BenchMark4,
+    BenchMark5,
     // BenchMark6,
     // BenchMark7,
     // BenchMark8,
@@ -90,17 +110,16 @@ int main()
     BenchMark10
   >;
 
-  run_tests<
-    TestPack,
+  using TesterPack = TypePack<
     AdolcTester,
-    AutodiffFwdStaticTester,
-    // AutodiffFwdDynamicTester,
-    AutodiffRevStaticTester,
-    // AutodiffRevDynamicTester,
-    // CppADTester,
-    // CppADCGTester,
+    AutodiffFwdTester,
+    AutodiffRevTester,
+    CppADTester,
+    CppADCGTester,
     NumericalTester
-  >();
+  >;
+
+  run_tests<TesterPack, TestPack>();
 
   return 0;
 }

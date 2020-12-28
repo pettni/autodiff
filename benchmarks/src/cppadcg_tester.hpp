@@ -1,32 +1,32 @@
 #ifndef SRC__CPPADCG_TESTER_HPP_
 #define SRC__CPPADCG_TESTER_HPP_
 
-
 #include <cppad/cg.hpp>
 
 #include <memory>
 
-#include "test_interface.hpp"
+#include "common.hpp"
 
-template<typename T>
-class CppADCGTester : public TestInterface<CppADCGTester<T>>
+
+class CppADCGTester
 {
 public:
   static constexpr char name[] = "CppADCG";
 
-  template<std::size_t _nX>
-  void setup()
+  template<typename Func, typename Derived>
+  void setup(Func && f, const Eigen::PlainObjectBase<Derived> & x)
   {
-    Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic, 1> ax(_nX);
-    ax.setOnes();
+    Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic,
+      1> ax = x.template cast<CppAD::AD<CppAD::cg::CG<double>>>();
 
     CppAD::Independent(ax);
-    Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic, 1> ay = T()(ax);
-    CppAD::ADFun<CppAD::cg::CG<double>> f(ax, ay);
-    f.optimize();
+    Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic, 1> ay = f(ax);
+    CppAD::ADFun<CppAD::cg::CG<double>> adfun(ax, ay);
+
+    adfun.optimize();
 
     // create dynamic library
-    CppAD::cg::ModelCSourceGen<double> cgen(f, "model_Test");
+    CppAD::cg::ModelCSourceGen<double> cgen(adfun, "model_Test");
     cgen.setCreateJacobian(true);
     cgen.setCreateHessian(false);
     cgen.setCreateForwardZero(false);
@@ -42,14 +42,15 @@ public:
     model = dynamicLib->model("model_Test");
   }
 
-  template<std::size_t _nX>
-  Eigen::Matrix<double, _nX, _nX>
-  run(const Eigen::Matrix<double, _nX, 1> & x)
+  template<typename Func, typename Derived>
+  void run(
+    Func &&,
+    const Eigen::PlainObjectBase<Derived> & x,
+    typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
-    Eigen::Matrix<double, _nX, _nX, Eigen::RowMajor> J;
     Eigen::VectorXd x_dyn = x;
-    Eigen::Map<Eigen::VectorXd>(J.data(), _nX * _nX) = model->Jacobian(x_dyn);
-    return J;
+    Eigen::Map<Eigen::VectorXd>(J.data(), J.size()) = model->Jacobian(x_dyn);
+    J.transposeInPlace();
   }
 
 private:
