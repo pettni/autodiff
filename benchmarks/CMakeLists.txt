@@ -37,6 +37,7 @@ else()
                              --prefix=${LOCAL_INSTALL_DIR}
                              --includedir=${LOCAL_INSTALL_DIR}/include
                              --libdir=${LOCAL_INSTALL_DIR}/lib
+                             --enable-traceless-refcounting  # hide warning in tapeless mode
         BUILD_IN_SOURCE      ON
         EXCLUDE_FROM_ALL     ON
     )
@@ -75,25 +76,6 @@ else()
 endif()
 
 
-add_executable(adolc_test
-    src/adolc_test.cpp
-)
-add_dependencies(adolc_test
-    adolc-external-install
-)
-target_include_directories(adolc_test
-PRIVATE
-    ${LOCAL_INSTALL_DIR}/include
-)
-target_link_directories(adolc_test
-PRIVATE
-    ${LOCAL_INSTALL_DIR}/lib
-)
-target_link_libraries(adolc_test
-    adolc
-)
-
-
 add_executable(run_speedtests
     src/run_speedtests.cpp
 )
@@ -112,6 +94,7 @@ PRIVATE
     ${LOCAL_INSTALL_DIR}/lib
 )
 target_link_libraries(run_speedtests
+    adolc
     dl
     Eigen3::Eigen
     pthread

@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "adolc_tester.hpp"
+#include "adolc_testers.hpp"
 #include "autodiff_testers.hpp"
 #include "cppadcg_tester.hpp"
 #include "cppad_tester.hpp"
@@ -41,17 +41,15 @@ void run_speedtest()
     name_str += " (ERROR)";
   }
 
-
   std::cout <<
     std::left <<
     std::setw(20) << name_str <<
-    std::setprecision(4) <<
-    std::right << std::setw(12) << std::scientific << static_cast<double>(res.setup_time.count()) /
+    std::setprecision(2) <<
+    std::right << std::setw(10) << std::scientific << static_cast<double>(res.setup_time.count()) /
     res.setup_iter <<
-    std::right << std::setw(12) << std::scientific << static_cast<double>(res.calc_time.count()) /
+    std::right << std::setw(10) << std::scientific << static_cast<double>(res.calc_time.count()) /
     res.calc_iter <<
     std::endl;
-
 }
 
 

@@ -1,3 +1,7 @@
+#ifndef SRC__AUTODIFF_TESTERS_HPP_
+#define SRC__AUTODIFF_TESTERS_HPP_
+
+
 #include <autodiff/common/meta.hpp>
 #include <autodiff/forward.hpp>
 #include <autodiff/forward/eigen.hpp>
@@ -12,8 +16,6 @@ class AutodiffFwdStaticTester : public TestInterface<AutodiffFwdStaticTester<T>>
 {
 public:
   static constexpr char name[] = "AutodiffFwdStatic";
-
-  static constexpr TesterType type = TesterType::STATIC;
 
   template<uint32_t _nX>
   void setup()
@@ -46,10 +48,13 @@ class AutodiffFwdDynamicTester : public TestInterface<AutodiffFwdDynamicTester<T
 public:
   static constexpr char name[] = "AutodiffFwdDynamic";
 
-  void setup(uint32_t)
+  template<uint32_t _nX>
+  void setup()
   {}
 
-  Eigen::MatrixXd run(const Eigen::VectorXd & x)
+  template<uint32_t _nX>
+  Eigen::Matrix<double, _nX, _nX>
+  run(const Eigen::Matrix<double, _nX, 1> & x)
   {
     Eigen::Matrix<autodiff::dual, -1, 1> x_ad = x.template cast<autodiff::dual>();
 
@@ -73,8 +78,6 @@ class AutodiffRevStaticTester : public TestInterface<AutodiffRevStaticTester<T>>
 {
 public:
   static constexpr char name[] = "AutodiffRevStatic";
-
-  static constexpr TesterType type = TesterType::STATIC;
 
   template<uint32_t _nX>
   void setup()
@@ -106,10 +109,13 @@ class AutodiffRevDynamicTester : public TestInterface<AutodiffRevDynamicTester<T
 public:
   static constexpr char name[] = "AutodiffRevDynamic";
 
-  void setup(uint32_t)
+  template<uint32_t _nX>
+  void setup()
   {}
 
-  Eigen::MatrixXd run(const Eigen::VectorXd & x)
+  template<uint32_t _nX>
+  Eigen::Matrix<double, _nX, _nX>
+  run(const Eigen::Matrix<double, _nX, 1> & x)
   {
     Eigen::Matrix<autodiff::var, -1, 1> x_ad = x.template cast<autodiff::var>();
     Eigen::Matrix<autodiff::var, -1, 1> F = f(x_ad);
@@ -124,3 +130,5 @@ public:
 private:
   T f{};
 };
+
+#endif  // SRC__AUTODIFF_TESTERS_HPP_

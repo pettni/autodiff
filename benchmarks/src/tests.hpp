@@ -1,3 +1,7 @@
+#ifndef SRC__TESTS_HPP_
+#define SRC__TESTS_HPP_
+
+
 #include <Eigen/Core>
 
 
@@ -165,3 +169,5 @@ struct BenchMark10
     return x_cur;
   }
 };
+
+#endif  // SRC__TESTS_HPP_

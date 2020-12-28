@@ -1,37 +1,11 @@
+#ifndef SRC__NUMERICAL_TESTER_HPP_
+#define SRC__NUMERICAL_TESTER_HPP_
+
+
 #include <unsupported/Eigen/NumericalDiff>
 
-#include <memory>
-
 #include "test_interface.hpp"
-
-
-template<typename T>
-struct TFunctor : T
-{
-  explicit TFunctor(std::size_t size)
-  : size_(size)
-  {}
-
-  using Scalar = double;
-  using InputType = Eigen::VectorXd;
-  using ValueType = Eigen::VectorXd;
-  static constexpr int InputsAtCompileTime = -1;
-  static constexpr int ValuesAtCompileTime = -1;
-  using JacobianType = Eigen::MatrixXd;
-
-  int values() const
-  {
-    return size_;
-  }
-
-  void operator()(const InputType & x, ValueType & y) const
-  {
-    y = T::operator()(x);
-  }
-
-private:
-  std::size_t size_;
-};
+#include "common.hpp"
 
 
 template<typename T>
@@ -40,22 +14,20 @@ class NumericalTester : public TestInterface<NumericalTester<T>>
 public:
   static constexpr char name[] = "Numerical";
 
-  void setup(uint32_t dynamic_size)
-  {
-    nd = std::make_unique<Eigen::NumericalDiff<TFunctor<T>>>(
-      TFunctor<T>(dynamic_size)
-    );
-  }
+  template<std::size_t _nX>
+  void setup()
+  {}
 
-  Eigen::MatrixXd run(const Eigen::VectorXd & x)
+  template<std::size_t _nX>
+  Eigen::Matrix<double, _nX, _nX> run(const Eigen::Matrix<double, _nX, 1> & x)
   {
-    Eigen::MatrixXd J(x.size(), x.size());
+    Eigen::NumericalDiff<EigenFunctor<_nX, _nX, T>> func;
+    Eigen::Matrix<double, _nX, _nX> J;
 
-    nd->df(x, J);
+    func.df(x, J);
 
     return J;
   }
-
-private:
-  std::unique_ptr<Eigen::NumericalDiff<TFunctor<T>>> nd;
 };
+
+#endif  // SRC__NUMERICAL_TESTER_HPP_
