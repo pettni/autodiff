@@ -5,10 +5,10 @@
 #include "test_interface.hpp"
 
 template<typename T>
-class CppADCGTester : public TestInterface<CppADCGTester<T>, T>
+class CppADCGTester : public TestInterface<CppADCGTester<T>>
 {
 public:
-  static constexpr char name[] = "CppADCGTester";
+  static constexpr char name[] = "CppADCG";
 
   void setup(uint32_t size)
   {
@@ -18,6 +18,7 @@ public:
     CppAD::Independent(ax);
     Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic, 1> ay = T()(ax);
     CppAD::ADFun<CppAD::cg::CG<double>> f(ax, ay);
+    f.optimize();
 
     // create dynamic library
     CppAD::cg::ModelCSourceGen<double> cgen(f, "model_Test");
@@ -39,7 +40,9 @@ public:
   Eigen::MatrixXd
   run(const Eigen::VectorXd & x)
   {
-    return model->Jacobian(x);
+    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> J(model->Domain(), model->Range());
+    Eigen::Map<Eigen::MatrixXd>(J.data(), model->Domain(), model->Range()) = model->Jacobian(x);
+    return J;
   }
 
 private:

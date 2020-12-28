@@ -1,3 +1,25 @@
+/*
+TESTING RULES
+
+* Task: compute dense jacobians of function Rn -> Rn
+* Input/output size known at compile time
+* No multithreading (benefits autodiff which does not support it)
+* For two-stage methods employ any available optimization in the setup step
+
+TESTS
+
+* Support variable sized inputs, return same size output
+* Can assume all inputs are positive
+
+TODO
+
+* Bold-face winner in each test: https://stackoverflow.com/questions/29997096/bold-output-in-c
+* Possible to not have testers templated on the test type (only template the functions)
+* Make all testers take static size, convert to dynamic size if needed...
+* Test that mimics robotic dynamics
+
+*/
+
 #ifndef TEST_INTERFACE_HPP_
 #define TEST_INTERFACE_HPP_
 
@@ -22,11 +44,72 @@ struct SpeedResult
 enum class TesterType { STATIC, DYNAMIC };
 
 
-template<typename Derived, typename T>
+template<typename Derived>
 class TestInterface
 {
 public:
   static constexpr TesterType type = TesterType::DYNAMIC;
+
+  template<uint32_t size, typename OtherDerived>
+  bool compare_with(TestInterface<OtherDerived> & other)
+  {
+    // setup
+    if constexpr (Derived::type == TesterType::DYNAMIC) {
+      static_cast<Derived &>(*this).setup(size);
+    }
+    if constexpr (Derived::type == TesterType::STATIC) {
+      static_cast<Derived &>(*this).template setup<size>();
+    }
+
+    if constexpr (OtherDerived::type == TesterType::DYNAMIC) {
+      static_cast<OtherDerived &>(other).setup(size);
+    }
+    if constexpr (OtherDerived::type == TesterType::STATIC) {
+      static_cast<OtherDerived &>(other).template setup<size>();
+    }
+
+    // compare on random vectors
+    bool success = true;
+
+    for (size_t i = 0; i < 5; i++) {
+
+      // ensure inputs are positive
+      Eigen::Matrix<double, size, 1> X =
+        2 * Eigen::VectorXd::Ones(size) + Eigen::VectorXd::Random(size);
+      Eigen::Matrix<double, size, size> J1, J2;
+
+      if constexpr (Derived::type == TesterType::DYNAMIC) {
+        Eigen::VectorXd X_dyn = X;
+        J1 = static_cast<Derived &>(*this).run(X_dyn);
+      }
+
+      if constexpr (Derived::type == TesterType::STATIC) {
+        J1 = static_cast<Derived &>(*this).template run<size>(X);
+      }
+
+      if constexpr (OtherDerived::type == TesterType::DYNAMIC) {
+        Eigen::VectorXd X_dyn = X;
+        J2 = static_cast<OtherDerived &>(other).run(X_dyn);
+      }
+
+      if constexpr (OtherDerived::type == TesterType::STATIC) {
+        J2 = static_cast<OtherDerived &>(other).template run<size>(X);
+      }
+
+      if (!J1.isApprox(J2, 1e-6)) {
+        std::cout << "Different jacobians detected!" << std::endl;
+        std::cout << "Jacobian from " << Derived::name << std::endl;
+        std::cout << J1 << std::endl;
+        std::cout << "Jacobian from " << OtherDerived::name << std::endl;
+        std::cout << J2 << std::endl;
+        success = false;
+        break;
+      }
+    }
+
+    return success;
+  }
+
 
   template<uint32_t size>
   SpeedResult test_speed()

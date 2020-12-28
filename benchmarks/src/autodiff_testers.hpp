@@ -8,10 +8,10 @@
 
 
 template<typename T>
-class AutodiffFwdStaticTester : public TestInterface<AutodiffFwdStaticTester<T>, T>
+class AutodiffFwdStaticTester : public TestInterface<AutodiffFwdStaticTester<T>>
 {
 public:
-  static constexpr char name[] = "AutodiffFwdStaticTester";
+  static constexpr char name[] = "AutodiffFwdStatic";
 
   static constexpr TesterType type = TesterType::STATIC;
 
@@ -41,10 +41,10 @@ private:
 
 
 template<typename T>
-class AutodiffFwdDynamicTester : public TestInterface<AutodiffFwdDynamicTester<T>, T>
+class AutodiffFwdDynamicTester : public TestInterface<AutodiffFwdDynamicTester<T>>
 {
 public:
-  static constexpr char name[] = "AutodiffFwdDynamicTester";
+  static constexpr char name[] = "AutodiffFwdDynamic";
 
   void setup(uint32_t)
   {}
@@ -69,10 +69,10 @@ private:
 
 
 template<typename T>
-class AutodiffRevStaticTester : public TestInterface<AutodiffRevStaticTester<T>, T>
+class AutodiffRevStaticTester : public TestInterface<AutodiffRevStaticTester<T>>
 {
 public:
-  static constexpr char name[] = "AutodiffRevStaticTester";
+  static constexpr char name[] = "AutodiffRevStatic";
 
   static constexpr TesterType type = TesterType::STATIC;
 
@@ -101,10 +101,10 @@ private:
 
 
 template<typename T>
-class AutodiffRevDynamicTester : public TestInterface<AutodiffRevDynamicTester<T>, T>
+class AutodiffRevDynamicTester : public TestInterface<AutodiffRevDynamicTester<T>>
 {
 public:
-  static constexpr char name[] = "AutodiffRevDynamicTester";
+  static constexpr char name[] = "AutodiffRevDynamic";
 
   void setup(uint32_t)
   {}

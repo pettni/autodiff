@@ -2,17 +2,20 @@
 
 #include <autodiff/common/meta.hpp>
 
+#include <iomanip>
 #include <iostream>
 
+#include "adolc_tester.hpp"
 #include "autodiff_testers.hpp"
 #include "cppadcg_tester.hpp"
 #include "cppad_tester.hpp"
+#include "numerical_tester.hpp"
 
 #include "tests.hpp"
 
 
 template<template<typename> typename Tester, typename Test, uint32_t size>
-void run_speetest()
+void run_speedtest()
 {
   if constexpr (
     std::is_same_v<Tester<Test>, AutodiffRevStaticTester<BenchMark10>>||
@@ -20,22 +23,35 @@ void run_speetest()
   {
     // test too slow for a single iter
     std::cout <<
-      std::left <<
-      std::setw(25) << Tester<Test>::name <<
-      "TIMEOUT" <<
+      std::left << std::setw(20) << Tester<Test>::name <<
+      std::right << std::setw(12) << "TIMEOUT" <<
       std::endl;
     return;
   }
   Tester<Test> test;
+
+  // run the test
   auto res = test.template test_speed<size>();
+
+  // compare with numerical
+  NumericalTester<Test> cmp;
+  bool correct = test.template compare_with<size>(cmp);
+  std::string name_str = Tester<Test>::name;
+  if (!correct) {
+    name_str += " (ERROR)";
+  }
+
+
   std::cout <<
     std::left <<
-    std::setw(25) << Tester<Test>::name <<
-    std::right << std::setw(12) << res.setup_time.count() / res.setup_iter <<
-    std::right << std::setw(12) << res.setup_iter <<
-    std::right << std::setw(12) << res.calc_time.count() / res.calc_iter <<
-    std::right << std::setw(12) << res.calc_iter <<
+    std::setw(20) << name_str <<
+    std::setprecision(4) <<
+    std::right << std::setw(12) << std::scientific << static_cast<double>(res.setup_time.count()) /
+    res.setup_iter <<
+    std::right << std::setw(12) << std::scientific << static_cast<double>(res.calc_time.count()) /
+    res.calc_iter <<
     std::endl;
+
 }
 
 
@@ -55,11 +71,11 @@ void run_tests()
   autodiff::detail::For<TestPack::size>(
     [](auto i) {
       std::cout << "=== TestPack<" << i << "> (n=2) ===" << std::endl;
-      (run_speetest<Tester, typename TestPack::template type<i>, 2>(), ...);
+      (run_speedtest<Tester, typename TestPack::template type<i>, 2>(), ...);
       std::cout << "=== TestPack<" << i << "> (n=5) ===" << std::endl;
-      (run_speetest<Tester, typename TestPack::template type<i>, 5>(), ...);
+      (run_speedtest<Tester, typename TestPack::template type<i>, 5>(), ...);
       std::cout << "=== TestPack<" << i << "> (n=10) ===" << std::endl;
-      (run_speetest<Tester, typename TestPack::template type<i>, 10>(), ...);
+      (run_speedtest<Tester, typename TestPack::template type<i>, 10>(), ...);
     });
 }
 
@@ -82,12 +98,14 @@ int main()
 
   run_tests<
     TestPack,
+    AdolcTester,
     AutodiffFwdStaticTester,
     AutodiffFwdDynamicTester,
     AutodiffRevStaticTester,
     AutodiffRevDynamicTester,
     CppADTester,
-    CppADCGTester
+    CppADCGTester,
+    NumericalTester
   >();
 
   return 0;

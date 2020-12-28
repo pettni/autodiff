@@ -3,10 +3,10 @@
 #include "test_interface.hpp"
 
 template<typename T>
-class CppADTester : public TestInterface<CppADTester<T>, T>
+class CppADTester : public TestInterface<CppADTester<T>>
 {
 public:
-  static constexpr char name[] = "CppADTester";
+  static constexpr char name[] = "CppAD";
 
   void setup(uint32_t dynamic_size)
   {
@@ -16,11 +16,15 @@ public:
     CppAD::Independent(ax);
     Eigen::Matrix<CppAD::AD<double>, Eigen::Dynamic, 1> ay = T()(ax);
     f_ad = CppAD::ADFun<double>(ax, ay);
+
+    f_ad.optimize();
   }
 
   Eigen::MatrixXd run(const Eigen::VectorXd & x)
   {
-    return f_ad.Jacobian(x);
+    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> J(f_ad.Domain(), f_ad.Range());
+    Eigen::Map<Eigen::MatrixXd>(J.data(), f_ad.Domain(), f_ad.Range()) = f_ad.Jacobian(x);
+    return J;
   }
 
 private:
