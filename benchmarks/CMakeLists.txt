@@ -23,16 +23,16 @@ if(SKIP_INSTALL_AD_TOOLS)
     add_custom_target(cppad-external-install)
     add_custom_target(cppad-cg-external-install)
 else()
-    # Download and install adept
     set(CONFIGURE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} ${CMAKE_CXX11_STANDARD_COMPILE_OPTION}")
 
+    # Download and install Adept
     externalproject_add(
         adept-external
         URL                  http://www.met.reading.ac.uk/clouds/adept/adept-2.0.8.tar.gz
         UPDATE_COMMAND       ""
         UPDATE_DISCONNECTED  ON
-        # Need this patch to make adept work with Eigen (prevents ambiguous operator*)
-        PATCH_COMMAND        patch <SOURCE_DIR>/include/adept/BinaryOperation.h < ${CMAKE_CURRENT_SOURCE_DIR}/patch/adept_sfinae.patch
+        # Need this patch to make adept work with Eigen (prevents gobbling constructor & ambiguous operator*)
+        PATCH_COMMAND        patch -p0 -ruN -d <SOURCE_DIR> < ${CMAKE_CURRENT_SOURCE_DIR}/patch/adept_sfinae.patch
         CONFIGURE_COMMAND    ${CMAKE_COMMAND} -E env
                              CC=${CMAKE_C_COMPILER}
                              CFLAGS=${CMAKE_C_FLAGS_RELEASE}
@@ -46,7 +46,7 @@ else()
     )
     externalproject_add_steptargets(adept-external install)
 
-    # Download and install adol-c
+    # Download and install ADOL-C
     externalproject_add(
         adolc-external
         GIT_REPOSITORY       git@github.com:coin-or/ADOL-C.git
@@ -71,7 +71,7 @@ else()
     )
     externalproject_add_steptargets(adolc-external install)
 
-    # Download and install cppad
+    # Download and install CppAD
     externalproject_add(
         cppad-external
         GIT_REPOSITORY       https://github.com/coin-or/CppAD.git
@@ -86,7 +86,7 @@ else()
     )
     externalproject_add_steptargets(cppad-external install)
 
-    # Download and install cppad-cg
+    # Download and install CppADCodeGen
     externalproject_add(
         cppad-cg-external
         GIT_REPOSITORY       https://github.com/joaoleal/CppADCodeGen.git
@@ -114,6 +114,11 @@ add_dependencies(run_speedtests
     adolc-external-install
     cppad-external-install
     cppad-cg-external-install
+)
+target_compile_definitions(run_speedtests
+PRIVATE
+    ADOLC_NO_TAPING                    # use ADOL-C with no-taping forward mode (usually faster)
+    CPPAD_FOR_TMB                      # required for cppad-cg on ODE test
 )
 target_include_directories(run_speedtests
 PRIVATE

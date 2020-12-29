@@ -1,14 +1,14 @@
 /*
 TESTING RULES
 
-* Task: compute dense jacobians of function Rn -> Rn
+* Task: compute dense jacobians of function Rn -> Rm
 * Sizes known at compile time (benefits forward functions)
 * No multithreading (benefits autodiff which does not support it)
 * For tape methods employ any available optimization in the setup step
 
 TESTS
 
-* Support variable sized inputs, return same size output
+* Support variable sized inputs
 * Can assume all inputs are positive
 * No branching
 
@@ -16,14 +16,10 @@ TODO
 
 * Figure out how to handle tests with different (fixed) sizes
 * Refine the tests
-   - Constant function                    (variable input size)
-   - Diagonal operations only             (variable input size)
-   - Sum-reduction                        (variable input size)
-   - boost numerical integration          (variable input size)
-   - Shallow fully connected NN with loss (variable input size)
    - Camera reprojection error            (fixed size)
    - Differentiate SE3 lie group dynamics (fixed size)
    - Integrate SE3 lie group dynamics     (vairable integration steps)
+* Let tests have (empty) constructors
 
 OTHER BENCHMARKS
 
@@ -59,7 +55,6 @@ AD TOOLS NOT IN BENCHMARK
 #include "test_utils.hpp"
 
 #include "tests.hpp"
-
 
 
 template<typename Tester, typename Test, uint32_t size>
@@ -115,8 +110,8 @@ void run_tests()
           using Tester = typename TesterPack::template type<tester_i>;
           using Test = typename TestPack::template type<test_i>;
           run_speedtest<Tester, Test, 3>();
-          run_speedtest<Tester, Test, 5>();
-          run_speedtest<Tester, Test, 10>();
+          // run_speedtest<Tester, Test, 5>();
+          // run_speedtest<Tester, Test, 10>();
         });
     });
 }
@@ -125,17 +120,11 @@ void run_tests()
 int main()
 {
   using TestPack = TypePack<
-    BenchMark0,
-    BenchMark1,
-    BenchMark2,
-    BenchMark3,
-    BenchMark4,
-    BenchMark5,
-    BenchMark6,
-    BenchMark7,
-    BenchMark8,
-    BenchMark9,
-    BenchMark10
+    ConstantNtoN,
+    CoefficientWise,
+    SumOfSquares,
+    ODE,
+    NeuralNet
   >;
 
   using TesterPack = TypePack<

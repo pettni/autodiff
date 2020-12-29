@@ -1,12 +1,17 @@
 #ifndef SRC__TESTS_HPP_
 #define SRC__TESTS_HPP_
 
+#include <boost/numeric/odeint.hpp>
+#include <boost/numeric/odeint/algebra/array_algebra.hpp>
 #include <Eigen/Core>
 
+#include <algorithm>
+#include <random>
 
-struct BenchMark0
+
+struct ConstantNtoN
 {
-  static constexpr char name[] = "BenchMark0";
+  static constexpr char name[] = "ConstantNtoN";
 
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
@@ -17,177 +22,127 @@ struct BenchMark0
 };
 
 
-struct BenchMark1
+struct CoefficientWise
 {
-  static constexpr char name[] = "BenchMark1";
+  static constexpr char name[] = "CoefficientWise";
 
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
-    int n = x.size();
-    Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1> res(n);
-    for (auto i = 0; i < n; ++i) {
-      res[i] = i;
-    }
-    return res;
+    return (x + x.cwiseInverse()).array().sin().matrix();
   }
 };
 
 
-struct BenchMark2
+struct SumOfSquares
 {
-  static constexpr char name[] = "BenchMark2";
+  static constexpr char name[] = "SumOfSquares";
+
+  template<typename Derived>
+  Eigen::Matrix<typename Derived::Scalar, 1, 1>
+  operator()(const Eigen::MatrixBase<Derived> & x) const
+  {
+    return Eigen::Matrix<typename Derived::Scalar, 1, 1>(x.cwiseAbs2().sum());
+  }
+};
+
+
+// Adept doesn't like this (operator*)
+struct ODE
+{
+  static constexpr char name[] = "ODE";
 
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
-    const auto n = x.size();
-    Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1> res(n);
-    for (auto i = 0; i < n; ++i) {
-      res[i] = -i / (x[i] * x[i]);
-    }
-    return res;
+    static constexpr std::size_t N = 10;
+
+    using scalar_t = typename Derived::Scalar;
+    using state_t = Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>;
+
+    auto x0 = x.eval();
+
+    // TODO: move this to a constructor
+
+    // create matrix with ones on super-diagonal
+    Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime,
+      Derived::RowsAtCompileTime> A(x.size(), x.size());
+    A.setZero();
+    A.template block(0, 1, x.size() - 1, x.size() - 1).diagonal().setOnes();
+
+    boost::numeric::odeint::integrate_n_steps(
+      boost::numeric::odeint::runge_kutta4<state_t, scalar_t, state_t, scalar_t,
+      boost::numeric::odeint::vector_space_algebra>{},
+      [&A](const state_t & x, state_t & dxdt, const scalar_t) {
+        dxdt = A * x;
+      },
+      x0, scalar_t{0.}, scalar_t{0.01}, N
+    );
+
+    return x0;
   }
 };
 
 
-struct BenchMark3
+// Adept doesn't like this (operator*)
+struct NeuralNet
 {
-  static constexpr char name[] = "BenchMark3";
+  static constexpr char name[] = "NeuralNet";
 
   template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
+  Eigen::Matrix<typename Derived::Scalar, 1, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
-    using std::sqrt;
-    const auto n = x.size();
-    Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1> res(n);
-    for (auto i = 0; i < n; ++i) {
-      res[i] = 1 + i / sqrt(x[i]);
-    }
-    return res;
+    static constexpr bool dynamic = Derived::RowsAtCompileTime == -1;
+    static constexpr int n0 = Derived::RowsAtCompileTime;
+    static constexpr int n1 = dynamic ? -1 : std::max<int>(Derived::RowsAtCompileTime / 2, 1);
+    static constexpr int n2 = dynamic ? -1 : std::max<int>(Derived::RowsAtCompileTime / 4, 1);
+    static constexpr int n3 = dynamic ? -1 : std::max<int>(Derived::RowsAtCompileTime / 8, 1);
+
+    int n0_dyn = x.size();
+    int n1_dyn = std::max<int>(n0_dyn / 2, 1);
+    int n2_dyn = std::max<int>(n1_dyn / 2, 1);
+    int n3_dyn = std::max<int>(n2_dyn / 2, 1);
+
+    // TODO: move this to a constructor, template on fixed input size
+    std::minstd_rand gen(101);  // fixed seed
+    std::normal_distribution<double> dis(0, 1);
+
+    Eigen::Matrix<typename Derived::Scalar, n1, n0> W1;
+    W1 = Eigen::Matrix<typename Derived::Scalar, n1, n0>::NullaryExpr(
+      n1_dyn, n0_dyn,
+      [&]() {
+        return static_cast<typename Derived::Scalar>(0.1 * dis(gen));
+      });
+
+    Eigen::Matrix<typename Derived::Scalar, n2, n1> W2;
+    W2 = Eigen::Matrix<typename Derived::Scalar, n2, n1>::NullaryExpr(
+      n2_dyn, n1_dyn,
+      [&]() {
+        return static_cast<typename Derived::Scalar>(0.1 * dis(gen));
+      });
+
+    Eigen::Matrix<typename Derived::Scalar, n3, n2> W3;
+    W3 = Eigen::Matrix<typename Derived::Scalar, n3, n2>::NullaryExpr(
+      n3_dyn, n2_dyn,
+      [&]() {
+        return static_cast<typename Derived::Scalar>(0.1 * dis(gen));
+      });
+
+    auto z1 = (W1 * x).eval();
+    auto a1 = z1.array().tanh().matrix().eval();
+
+    auto z2 = (W2 * a1).eval();
+    auto a2 = z2.array().tanh().matrix().eval();
+
+    auto z3 = (W3 * a2).eval();
+    auto a3 = z3.array().tanh().matrix().eval();
+
+    return Eigen::Matrix<typename Derived::Scalar, 1, 1>(a3.squaredNorm());
   }
 };
 
-
-struct BenchMark4
-{
-  static constexpr char name[] = "BenchMark4";
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    using std::sqrt;
-    return x / sqrt(x.cwiseAbs2().sum());
-  }
-};
-
-
-struct BenchMark5
-{
-  static constexpr char name[] = "BenchMark5";
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    return x.cwiseInverse();
-  }
-};
-
-
-struct BenchMark6
-{
-  static constexpr char name[] = "BenchMark6";
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    return x.array().log().matrix() / x.sum();
-  }
-};
-
-
-struct BenchMark7
-{
-  static constexpr char name[] = "BenchMark7";
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    // problems with pow (adolc) and array::operator* (adept)
-    return x.array().sin().matrix().cwiseAbs2() - x.array().cos().matrix().cwiseAbs2();
-  }
-};
-
-
-struct BenchMark8
-{
-  static constexpr char name[] = "BenchMark8";
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    using Scalar = typename Derived::Scalar;
-
-    using std::exp;
-    const auto n = x.size();
-    const Scalar fval = x.array().exp().matrix().sum();
-    Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1> res(n);
-    for (auto i = 0; i < n; ++i) {
-      res[i] = Scalar(i) / x[i] * (1. + 1. / x[i]) * exp(x[i] - fval);
-    }
-    return res;
-  }
-};
-
-
-struct BenchMark9
-{
-  static constexpr char name[] = "BenchMark9";
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    using Scalar = typename Derived::Scalar;
-    return Scalar(2) * x +
-           Scalar(3) * x.cwiseProduct(x) +
-           Scalar(1) * x.cwiseProduct(x).cwiseInverse() +
-           Scalar(2) * x.cwiseProduct(x).cwiseProduct(x).cwiseInverse() +
-           Scalar(3) * x.cwiseProduct(x).cwiseProduct(x).cwiseProduct(x).cwiseInverse() +
-           x.array().log().matrix();
-  }
-};
-
-
-// Simulate numerical integration of an ODE using Euler
-struct BenchMark10
-{
-  static constexpr char name[] = "BenchMark10";
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    using Scalar = typename Derived::Scalar;
-    using VecT = Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1
-    >;
-
-    VecT x_cur = x;
-    for (int i = 0; i != 100; ++i) {
-      VecT dx = Scalar(-0.1) * x_cur.sum() * VecT::Ones(x.size()) +
-        Scalar(3) * VecT::Ones(x.size());
-      x_cur += Scalar(0.01) * dx;
-    }
-    return x_cur;
-  }
-};
 
 #endif  // SRC__TESTS_HPP_

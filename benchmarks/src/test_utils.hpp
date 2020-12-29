@@ -36,7 +36,7 @@ bool test_correctness()
     tester1.run([&test](const auto & x) {return test(x);}, x, J1);
     tester2.run([&test](const auto & x) {return test(x);}, x, J2);
 
-    if (!J1.isApprox(J2, 1e-6)) {
+    if (!J1.isApprox(J2, 1e-3)) {
       std::cerr << "Different jacobians detected!" << std::endl;
       std::cerr << "Jacobian from " << Tester1::name << std::endl;
       std::cerr << J1 << std::endl;
@@ -104,7 +104,7 @@ SpeedResult test_speed()
   std::thread calc_thr([&test, &tester, &canceled, &calc_promise]() {
       Eigen::Matrix<double, _nX, 1> x;
       x.setOnes();
-      Eigen::Matrix<double, _nX, _nX> J;
+      typename EigenFunctor<Test, decltype(x)>::JacobianType J;
 
       std::size_t cntr = 0;
       const auto beg = std::chrono::high_resolution_clock::now();

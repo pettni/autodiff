@@ -30,8 +30,10 @@ public:
     typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
     Eigen::VectorXd x_dyn = x;
-    Eigen::Map<Eigen::VectorXd>(J.data(), J.size()) = f_ad.Jacobian(x_dyn);
-    J.transposeInPlace();
+    auto j_ad = f_ad.Jacobian(x_dyn);
+
+    using JacTRow = typename EigenFunctor<Func, Derived>::JacobianTypeRow;
+    J = Eigen::Map<JacTRow>(j_ad.data(), j_ad.size() / x.size(), x.size());
   }
 
 private:

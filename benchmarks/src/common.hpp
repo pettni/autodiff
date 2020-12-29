@@ -20,6 +20,10 @@ struct EigenFunctor
     Scalar, ValueType::SizeAtCompileTime, InputType::SizeAtCompileTime
   >;
 
+  using JacobianTypeRow = Eigen::Matrix<
+    Scalar, ValueType::SizeAtCompileTime, InputType::SizeAtCompileTime, Eigen::RowMajor
+  >;
+
   int values_ = ValueType::SizeAtCompileTime;  // must be changed for dynamic sizing
 
   explicit EigenFunctor(_Func && func)

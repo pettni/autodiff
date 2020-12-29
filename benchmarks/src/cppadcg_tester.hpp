@@ -16,8 +16,8 @@ public:
   template<typename Func, typename Derived>
   void setup(Func && f, const Eigen::PlainObjectBase<Derived> & x)
   {
-    Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic,
-      1> ax = x.template cast<CppAD::AD<CppAD::cg::CG<double>>>();
+    Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic, 1> ax =
+      x.template cast<CppAD::AD<CppAD::cg::CG<double>>>().eval();
 
     CppAD::Independent(ax);
     Eigen::Matrix<CppAD::AD<CppAD::cg::CG<double>>, Eigen::Dynamic, 1> ay = f(ax);
@@ -49,8 +49,10 @@ public:
     typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
     Eigen::VectorXd x_dyn = x;
-    Eigen::Map<Eigen::VectorXd>(J.data(), J.size()) = model->Jacobian(x_dyn);
-    J.transposeInPlace();
+    auto j_ad = model->Jacobian(x_dyn);
+
+    using JacTRow = typename EigenFunctor<Func, Derived>::JacobianTypeRow;
+    J = Eigen::Map<JacTRow>(j_ad.data(), j_ad.size() / x.size(), x.size());
   }
 
 private:

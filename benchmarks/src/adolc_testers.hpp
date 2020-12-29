@@ -1,8 +1,6 @@
 #ifndef SRC__ADOLC_TESTERS_HPP_
 #define SRC__ADOLC_TESTERS_HPP_
 
-#define ADOLC_NO_TAPING
-
 #include <utility>
 
 #ifdef ADOLC_NO_TAPING
@@ -14,7 +12,7 @@
 class AdolcTester
 {
 public:
-  static constexpr char name[] = "ADOL-C (Tapeless)";
+  static constexpr char name[] = "ADOL-C-Tapeless";
 
   template<typename Func, typename Derived>
   void setup(Func &&, const Eigen::PlainObjectBase<Derived> & x)

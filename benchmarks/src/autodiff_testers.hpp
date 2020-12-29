@@ -48,14 +48,13 @@ public:
   template<typename Func, typename Derived>
   void run(
     Func && f, const Eigen::PlainObjectBase<Derived> & x,
-    typename EigenFunctor<Func,
-    Derived>::JacobianType & J)
+    typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
     auto x_ad = x.template cast<autodiff::var>().eval();
     auto F = f(x_ad);
 
-    if constexpr (Derived::SizeAtCompileTime != -1) {
-      autodiff::detail::For<Derived::SizeAtCompileTime>(
+    if constexpr (EigenFunctor<Func, Derived>::JacobianType::RowsAtCompileTime != -1) {
+      autodiff::detail::For<EigenFunctor<Func, Derived>::JacobianType::RowsAtCompileTime>(
         [&J, &F, &x_ad](auto i) {
           J.row(i) = autodiff::reverse::gradient(F(i), x_ad);
         });
