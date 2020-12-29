@@ -39,8 +39,7 @@ public:
 
   template<typename Func, typename Derived>
   void setup(Func && f, const Eigen::PlainObjectBase<Derived> & x)
-  {
-  }
+  {}
 
   template<typename Func, typename Derived>
   void run(

@@ -12,14 +12,14 @@
 #include "common.hpp"
 
 
-template<typename Tester1, typename Tester2, typename Test, std::size_t _nX>
+template<typename Tester1, typename Tester2, typename Test>
 bool test_correctness()
 {
-  Eigen::Matrix<double, _nX, 1> x;
+  Test test;
+
+  Eigen::Matrix<double, Test::InputSize, 1> x;
   x.setOnes();
   typename EigenFunctor<Test, decltype(x)>::JacobianType J1, J2;
-
-  Test test;
 
   Tester1 tester1;
   Tester2 tester2;
@@ -31,18 +31,19 @@ bool test_correctness()
   // test
   for (size_t i = 0; i < 5; i++) {
     // ensure inputs are positive
-    x = 2 * Eigen::Matrix<double, _nX, 1>::Ones() + Eigen::Matrix<double, _nX, 1>::Random();
+    x = 2 * Eigen::Matrix<double, Test::InputSize, 1>::Ones() +
+      Eigen::Matrix<double, Test::InputSize, 1>::Random();
 
     tester1.run([&test](const auto & x) {return test(x);}, x, J1);
     tester2.run([&test](const auto & x) {return test(x);}, x, J2);
 
-    if (!J1.isApprox(J2, 1e-3)) {
-      std::cerr << "Different jacobians detected!" << std::endl;
-      std::cerr << "Jacobian from " << Tester1::name << std::endl;
-      std::cerr << J1 << std::endl;
-      std::cerr << "Jacobian from " << Tester2::name << std::endl;
-      std::cerr << J2 << std::endl;
-      return false;
+    std::cerr << "Different jacobians detected!" << std::endl;
+    std::cerr << "Jacobian from " << Tester1::name << std::endl;
+    std::cerr << J1 << std::endl;
+    std::cerr << "Jacobian from " << Tester2::name << std::endl;
+    std::cerr << J2 << std::endl;
+    return false;
+    if (!J1.isApprox(J2, 1e-5)) {
     }
   }
 
@@ -58,7 +59,7 @@ struct SpeedResult
 };
 
 
-template<typename Tester, typename Test, std::size_t _nX>
+template<typename Tester, typename Test>
 SpeedResult test_speed()
 {
   SpeedResult res{};
@@ -72,7 +73,7 @@ SpeedResult test_speed()
 
   std::thread setup_thr(
     [&tester, &test, &canceled, &setup_promise]() {
-      Eigen::Matrix<double, _nX, 1> x;
+      Eigen::Matrix<double, Test::InputSize, 1> x;
       x.setOnes();
 
       std::size_t cntr = 0;
@@ -102,7 +103,7 @@ SpeedResult test_speed()
   auto calc_ftr = calc_promise.get_future();
   canceled.store(false);
   std::thread calc_thr([&test, &tester, &canceled, &calc_promise]() {
-      Eigen::Matrix<double, _nX, 1> x;
+      Eigen::Matrix<double, Test::InputSize, 1> x;
       x.setOnes();
       typename EigenFunctor<Test, decltype(x)>::JacobianType J;
 

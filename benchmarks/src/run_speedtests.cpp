@@ -1,26 +1,23 @@
 /*
 TESTING RULES
 
-* Task: compute dense jacobians of function Rn -> Rm
-* Sizes known at compile time (benefits forward functions)
+* Task: compute jacobians
+* Input/output sizes known at compile time (benefits forward functions)
 * No multithreading (benefits autodiff which does not support it)
-* For tape methods employ any available optimization in the setup step
+* For tape methods employ all available optimization in the setup step
 
 TESTS
 
 * Support variable sized inputs
 * Can assume all inputs are positive
-* No branching
+* No branching (if/else) allowed
 
 TODO
 
 * Add Ceres
-* Figure out how to handle tests with different (fixed) sizes
-* Refine the tests
-   - Camera reprojection error            (fixed size)
-   - Differentiate SE3 lie group dynamics (fixed size)
-   - Integrate SE3 lie group dynamics     (vairable integration steps)
-* Let tests have (empty) constructors
+* Additional tests
+   - Differentiate SE3 chain of poses                   (N = number of links)
+   - Integrate SE3 x E6 lie group dynamics using boost  (N = number of integration steps)
 
 OTHER BENCHMARKS
 
@@ -34,7 +31,7 @@ AD TOOLS NOT IN BENCHMARK
 
 * boost::math::differentiation     (Seems incompatible with array math)
 * Enzime: https://enzyme.mit.edu/  (Clang compiler only)
-* Fadbad: http://www.fadbad.com    (Seems unmaintained, Sacado claims to be faster)
+* Fadbad: http://www.fadbad.com    (Seems unmaintained + Sacado claims to be successor)
 * dco/c++                          (Non-free license)
 
 */
@@ -58,10 +55,10 @@ AD TOOLS NOT IN BENCHMARK
 
 #include "test_utils.hpp"
 
-template<typename Tester, typename Test, uint32_t size>
+template<typename Tester, typename Test>
 void run_speedtest()
 {
-  auto res = test_speed<Tester, Test, size>();
+  auto res = test_speed<Tester, Test>();
 
   if (res.calc_timeout || res.setup_timeout) {
     std::cerr <<
@@ -73,15 +70,18 @@ void run_speedtest()
 
   // compare with numerical
   std::string name_str = Tester::name;
-  if (!test_correctness<Tester, NumericalTester, Test, size>()) {
-    std::cerr << Tester::name << " gave incorrect answer on " << Test::name << std::endl;
+  if (!test_correctness<Tester, NumericalTester, Test>()) {
+    std::cerr <<
+      std::left << std::setw(20) << Tester::name <<
+      std::right << std::setw(10) << "ERROR" <<
+      std::endl;
     return;
   }
 
   std::cout <<
     std::left << std::setw(20) << Tester::name <<
     std::left << std::setw(20) << Test::name <<
-    std::left << std::setw(5) << size <<
+    std::left << std::setw(5) << Test::N <<
     std::setprecision(2) <<
     std::right << std::setw(10) << std::scientific <<
     static_cast<double>(res.setup_time.count()) / res.setup_iter <<
@@ -110,9 +110,7 @@ void run_tests()
         [ = ](auto tester_i) {
           using Tester = typename TesterPack::template type<tester_i>;
           using Test = typename TestPack::template type<test_i>;
-          run_speedtest<Tester, Test, 3>();
-          run_speedtest<Tester, Test, 5>();
-          run_speedtest<Tester, Test, 10>();
+          run_speedtest<Tester, Test>();
         });
     });
 }
@@ -121,20 +119,21 @@ void run_tests()
 int main()
 {
   using TestPack = TypePack<
-    ConstantNtoN,
-    CoefficientWise,
-    SumOfSquares,
-    ODE,
-    NeuralNet
+    // ConstantNtoN<10>,
+    // CoefficientWise<10>,
+    // SumOfSquares<10>,
+    // ODE<10>,
+    // NeuralNet<10>
+    ReprojectionError<10>
   >;
 
   using TesterPack = TypePack<
-    AdeptTester,
-    AdolcTester,
-    AutodiffFwdTester,
-    AutodiffRevTester,
-    CppADTester,
-    CppADCGTester,
+    // AdeptTester,
+    // AdolcTester,
+    // AutodiffFwdTester,
+    // AutodiffRevTester,
+    // CppADTester,
+    // CppADCGTester,
     NumericalTester,
     SacadoTester
   >;
