@@ -14,6 +14,7 @@ TESTS
 
 TODO
 
+* Add Ceres
 * Figure out how to handle tests with different (fixed) sizes
 * Refine the tests
    - Camera reprojection error            (fixed size)
@@ -33,8 +34,7 @@ AD TOOLS NOT IN BENCHMARK
 
 * boost::math::differentiation     (Seems incompatible with array math)
 * Enzime: https://enzyme.mit.edu/  (Clang compiler only)
-* Fadbad: http://www.fadbad.com    (Seems unmaintained)
-* Sacado                           (Website broken)
+* Fadbad: http://www.fadbad.com    (Seems unmaintained, Sacado claims to be faster)
 * dco/c++                          (Non-free license)
 
 */
@@ -52,10 +52,11 @@ AD TOOLS NOT IN BENCHMARK
 #include "cppadcg_tester.hpp"  // must be before cppad_tester
 #include "cppad_tester.hpp"
 #include "numerical_tester.hpp"
-#include "test_utils.hpp"
+#include "sacado_tester.hpp"
 
 #include "tests.hpp"
 
+#include "test_utils.hpp"
 
 template<typename Tester, typename Test, uint32_t size>
 void run_speedtest()
@@ -110,8 +111,8 @@ void run_tests()
           using Tester = typename TesterPack::template type<tester_i>;
           using Test = typename TestPack::template type<test_i>;
           run_speedtest<Tester, Test, 3>();
-          // run_speedtest<Tester, Test, 5>();
-          // run_speedtest<Tester, Test, 10>();
+          run_speedtest<Tester, Test, 5>();
+          run_speedtest<Tester, Test, 10>();
         });
     });
 }
@@ -134,7 +135,8 @@ int main()
     AutodiffRevTester,
     CppADTester,
     CppADCGTester,
-    NumericalTester
+    NumericalTester,
+    SacadoTester
   >;
 
   run_tests<TesterPack, TestPack>();

@@ -1,5 +1,5 @@
-#ifndef SRC__COMMON_HPP_
-#define SRC__COMMON_HPP_
+#ifndef COMMON_HPP_
+#define COMMON_HPP_
 
 #include <Eigen/Core>
 
@@ -51,4 +51,4 @@ private:
   _Func func_;
 };
 
-#endif  // SRC__COMMON_HPP_
+#endif  // COMMON_HPP_

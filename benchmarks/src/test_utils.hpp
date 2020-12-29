@@ -117,7 +117,7 @@ SpeedResult test_speed()
       calc_promise.set_value(std::make_pair(cntr, end - beg));
     });
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(3000));
   canceled.store(true);
 
   if (calc_ftr.wait_for(std::chrono::milliseconds(1000)) == std::future_status::ready) {

@@ -1,5 +1,5 @@
-#ifndef SRC__NUMERICAL_TESTER_HPP_
-#define SRC__NUMERICAL_TESTER_HPP_
+#ifndef NUMERICAL_TESTER_HPP_
+#define NUMERICAL_TESTER_HPP_
 
 #include <unsupported/Eigen/NumericalDiff>
 
@@ -28,4 +28,4 @@ public:
   }
 };
 
-#endif  // SRC__NUMERICAL_TESTER_HPP_
+#endif  // NUMERICAL_TESTER_HPP_

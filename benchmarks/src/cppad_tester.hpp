@@ -1,5 +1,5 @@
-#ifndef SRC__CPPAD_TESTER_HPP_
-#define SRC__CPPAD_TESTER_HPP_
+#ifndef CPPAD_TESTER_HPP_
+#define CPPAD_TESTER_HPP_
 
 #include <cppad/cppad.hpp>
 
@@ -40,4 +40,4 @@ private:
   CppAD::ADFun<double> f_ad;
 };
 
-#endif  // SRC__CPPAD_TESTER_HPP_
+#endif  // CPPAD_TESTER_HPP_

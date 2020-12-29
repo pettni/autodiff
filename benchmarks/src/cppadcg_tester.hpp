@@ -1,5 +1,5 @@
-#ifndef SRC__CPPADCG_TESTER_HPP_
-#define SRC__CPPADCG_TESTER_HPP_
+#ifndef CPPADCG_TESTER_HPP_
+#define CPPADCG_TESTER_HPP_
 
 #include <cppad/cg.hpp>
 
@@ -38,6 +38,9 @@ public:
     // compile source code
     CppAD::cg::DynamicModelLibraryProcessor<double> p(libcgen);
     CppAD::cg::GccCompiler<double> compiler;
+    compiler.addCompileFlag("-O3");
+    compiler.addCompileFlag("-DNDEBUG");
+    compiler.addCompileFlag("-march=native");
     dynamicLib = p.createDynamicLibrary(compiler);
     model = dynamicLib->model("model_Test");
   }
@@ -60,4 +63,4 @@ private:
   std::unique_ptr<CppAD::cg::GenericModel<double>> model;
 };
 
-#endif  // SRC__CPPADCG_TESTER_HPP_
+#endif  // CPPADCG_TESTER_HPP_

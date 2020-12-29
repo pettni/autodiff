@@ -22,6 +22,7 @@ if(SKIP_INSTALL_AD_TOOLS)
     add_custom_target(adolc-external-install)
     add_custom_target(cppad-external-install)
     add_custom_target(cppad-cg-external-install)
+    add_custom_target(sacado-cg-external-install)
 else()
     set(CONFIGURE_CXX_FLAGS "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} ${CMAKE_CXX11_STANDARD_COMPILE_OPTION}")
 
@@ -102,6 +103,24 @@ else()
     )
     externalproject_add_steptargets(cppad-cg-external install)
 
+    # Download and install Sacado
+    externalproject_add(
+        sacado-cg-external
+        GIT_REPOSITORY       git@github.com:trilinos/Trilinos.git
+        GIT_TAG              trilinos-release-13-0-1
+        GIT_SHALLOW          ON
+        GIT_CONFIG           advice.detachedHead=false
+        UPDATE_COMMAND       ""
+        UPDATE_DISCONNECTED  ON
+        CMAKE_ARGS           -DTrilinos_ENABLE_Sacado:BOOL=ON
+                             -DTrilinos_ENABLE_Fortran:BOOL=OFF
+                             -DTrilinos_ENABLE_ALL_OPTIONAL_PACKAGES:BOOL=OFF
+                             -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
+        EXCLUDE_FROM_ALL     ON
+    )
+    externalproject_add_steptargets(sacado-cg-external install)
+
+
     set(SKIP_INSTALL_AD_TOOLS ON CACHE BOOL "Set to skip superbuild")
 endif()
 
@@ -114,6 +133,7 @@ add_dependencies(run_speedtests
     adolc-external-install
     cppad-external-install
     cppad-cg-external-install
+    sacado-cg-external-install
 )
 target_compile_definitions(run_speedtests
 PRIVATE
@@ -135,5 +155,13 @@ target_link_libraries(run_speedtests
     dl
     Eigen3::Eigen
     pthread
-    adolc
+    sacado
+#     kokkoscontainers
+#     kokkoscore
+#     teuchoscomm
+    # teuchoscore
+#     teuchoskokkoscomm
+#     teuchoskokkoscompat
+#     teuchosparameterlist
+#     teuchosparser
 )

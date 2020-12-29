@@ -1,5 +1,5 @@
-#ifndef SRC__TESTS_HPP_
-#define SRC__TESTS_HPP_
+#ifndef TESTS_HPP_
+#define TESTS_HPP_
 
 #include <boost/numeric/odeint.hpp>
 #include <boost/numeric/odeint/algebra/array_algebra.hpp>
@@ -145,4 +145,4 @@ struct NeuralNet
 };
 
 
-#endif  // SRC__TESTS_HPP_
+#endif  // TESTS_HPP_

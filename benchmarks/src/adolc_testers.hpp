@@ -1,5 +1,5 @@
-#ifndef SRC__ADOLC_TESTERS_HPP_
-#define SRC__ADOLC_TESTERS_HPP_
+#ifndef ADOLC_TESTERS_HPP_
+#define ADOLC_TESTERS_HPP_
 
 #include <utility>
 
@@ -92,4 +92,4 @@ public:
 #endif  // ADOLC_NO_TAPING
 
 
-#endif  // SRC__ADOLC_TESTERS_HPP_
+#endif  // ADOLC_TESTERS_HPP_

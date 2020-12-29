@@ -1,5 +1,5 @@
-#ifndef SRC__AUTODIFF_TESTERS_HPP_
-#define SRC__AUTODIFF_TESTERS_HPP_
+#ifndef AUTODIFF_TESTERS_HPP_
+#define AUTODIFF_TESTERS_HPP_
 
 #include <autodiff/common/meta.hpp>
 #include <autodiff/forward.hpp>
@@ -66,4 +66,4 @@ public:
   }
 };
 
-#endif  // SRC__AUTODIFF_TESTERS_HPP_
+#endif  // AUTODIFF_TESTERS_HPP_
