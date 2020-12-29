@@ -15,9 +15,6 @@ TESTS
 TODO
 
 * Add Ceres
-* Additional tests
-   - Differentiate SE3 chain of poses                   (N = number of links)
-   - Integrate SE3 x E6 lie group dynamics using boost  (N = number of integration steps)
 
 OTHER BENCHMARKS
 
@@ -40,6 +37,7 @@ AD TOOLS NOT IN BENCHMARK
 
 #include <autodiff/common/meta.hpp>
 
+#include <exception>
 #include <iomanip>
 #include <iostream>
 
@@ -52,6 +50,7 @@ AD TOOLS NOT IN BENCHMARK
 #include "sacado_tester.hpp"
 
 #include "tests.hpp"
+#include "tests_manif.hpp"
 
 #include "test_utils.hpp"
 
@@ -63,19 +62,29 @@ void run_speedtest()
   if (res.calc_timeout || res.setup_timeout) {
     std::cerr <<
       std::left << std::setw(20) << Tester::name <<
-      std::right << std::setw(10) << "TIMEOUT (DETACHED)" <<
+      std::left << std::setw(20) << Test::name <<
+      "TIMEOUT (DETACHED)" <<
+      std::endl;
+    return;
+  }
+
+  // check if error occured
+  if (!res.exception.empty()) {
+    std::cerr <<
+      std::left << std::setw(20) << Tester::name <<
+      std::left << std::setw(20) << Test::name <<
+      "EXCEPTION: " << res.exception <<
       std::endl;
     return;
   }
 
   // compare with numerical
-  std::string name_str = Tester::name;
   if (!test_correctness<Tester, NumericalTester, Test>()) {
     std::cerr <<
       std::left << std::setw(20) << Tester::name <<
-      std::right << std::setw(10) << "ERROR" <<
+      std::left << std::setw(20) << Test::name <<
+      "CORRECTNESS ERROR" <<
       std::endl;
-    return;
   }
 
   std::cout <<
@@ -118,27 +127,59 @@ void run_tests()
 
 int main()
 {
-  using TestPack = TypePack<
-    // ConstantNtoN<10>,
-    // CoefficientWise<10>,
-    // SumOfSquares<10>,
-    // ODE<10>,
-    // NeuralNet<10>
-    ReprojectionError<10>
-  >;
+  // these can run all tests without (but do not necessarily succeed)
+  run_tests<TypePack<
+      AdolcTester,
+      AutodiffFwdTester,
+      CppADTester,
+      CppADCGTester,
+      NumericalTester,
+      SacadoTester
+    >,
+    TypePack<
+      ConstantNtoN<3>,
+      CoefficientWise<3>,
+      SumOfSquares<3>,
+      ODE<3>,
+      NeuralNet<3>,
+      ReprojectionError<3>,
+      Manipulator<3>,
+      SE3Integrator<3>
+    >
+  >();
 
-  using TesterPack = TypePack<
-    // AdeptTester,
-    // AdolcTester,
-    // AutodiffFwdTester,
-    // AutodiffRevTester,
-    // CppADTester,
-    // CppADCGTester,
-    NumericalTester,
-    SacadoTester
-  >;
+  // adept has issues together with manif (probably the Constants trait )
+  run_tests<TypePack<
+      AdeptTester
+    >,
+    TypePack<
+      ConstantNtoN<3>,
+      CoefficientWise<3>,
+      SumOfSquares<3>,
+      ODE<3>,
+      NeuralNet<3>
+      // ReprojectionError<3>    // segmentation fault
+      // Manipulator<3>          // segmentation fault
+      // SE3Integrator<3>        // segmentation faule
+    >
+  >();
 
-  run_tests<TesterPack, TestPack>();
+
+  // compilation issue with the autodiff reverse type
+  run_tests<TypePack<
+      AutodiffRevTester
+    >,
+    TypePack<
+      ConstantNtoN<3>,
+      CoefficientWise<3>,
+      SumOfSquares<3>,
+      // ODE<3>,                 // times out
+      NeuralNet<3>,
+      ReprojectionError<3>,
+      Manipulator<3>
+      // SE3Integrator<3>        // compile time invalid product
+    >
+  >();
 
   return 0;
 }

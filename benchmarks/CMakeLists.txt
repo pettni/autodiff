@@ -120,10 +120,18 @@ else()
     )
     externalproject_add_steptargets(sacado-cg-external install)
 
+    # Download and install manif
+    externalproject_add(
+        manif-external
+        GIT_REPOSITORY       git@github.com:artivis/manif.git
+        GIT_TAG              master
+        GIT_SHALLOW          ON
+        GIT_CONFIG           advice.detachedHead=false
+        CMAKE_ARGS           -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
+    )
 
     set(SKIP_INSTALL_AD_TOOLS ON CACHE BOOL "Set to skip superbuild")
 endif()
-
 
 add_executable(run_speedtests
     src/run_speedtests.cpp

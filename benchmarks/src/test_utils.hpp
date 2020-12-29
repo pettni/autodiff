@@ -6,7 +6,9 @@
 #include <atomic>
 #include <chrono>
 #include <future>
+#include <string>
 #include <thread>
+#include <tuple>
 #include <utility>
 
 #include "common.hpp"
@@ -24,27 +26,32 @@ bool test_correctness()
   Tester1 tester1;
   Tester2 tester2;
 
-  // setup
-  tester1.setup([&test](const auto & x) {return test(x);}, x);
-  tester2.setup([&test](const auto & x) {return test(x);}, x);
+  try {
+    // setup
+    tester1.setup([&test](const auto & x) {return test(x);}, x);
+    tester2.setup([&test](const auto & x) {return test(x);}, x);
 
-  // test
-  for (size_t i = 0; i < 5; i++) {
-    // ensure inputs are positive
-    x = 2 * Eigen::Matrix<double, Test::InputSize, 1>::Ones() +
-      Eigen::Matrix<double, Test::InputSize, 1>::Random();
+    // test
+    for (size_t i = 0; i < 5; i++) {
+      // ensure inputs are positive
+      x = 2 * Eigen::Matrix<double, Test::InputSize, 1>::Ones() +
+        Eigen::Matrix<double, Test::InputSize, 1>::Random();
 
-    tester1.run([&test](const auto & x) {return test(x);}, x, J1);
-    tester2.run([&test](const auto & x) {return test(x);}, x, J2);
+      tester1.run([&test](const auto & x) {return test(x);}, x, J1);
+      tester2.run([&test](const auto & x) {return test(x);}, x, J2);
 
-    std::cerr << "Different jacobians detected!" << std::endl;
-    std::cerr << "Jacobian from " << Tester1::name << std::endl;
-    std::cerr << J1 << std::endl;
-    std::cerr << "Jacobian from " << Tester2::name << std::endl;
-    std::cerr << J2 << std::endl;
-    return false;
-    if (!J1.isApprox(J2, 1e-5)) {
+      if (!J1.isApprox(J2, 1e-5)) {
+        std::cerr << "Different jacobians detected on " << Test::name << std::endl;
+        std::cerr << "Jacobian from " << Tester1::name << std::endl;
+        std::cerr << J1 << std::endl;
+        std::cerr << "Jacobian from " << Tester2::name << std::endl;
+        std::cerr << J2 << std::endl;
+        return false;
+      }
     }
+  } catch (const std::exception & e) {
+    std::cerr << "Exception thrown during correctness test: " << e.what() << '\n';
+    return false;
   }
 
   return true;
@@ -53,7 +60,8 @@ bool test_correctness()
 
 struct SpeedResult
 {
-  bool setup_timeout, calc_timeout;
+  std::string exception{""};
+  bool setup_timeout{false}, calc_timeout{false};
   uint64_t setup_iter{}, calc_iter{};
   std::chrono::nanoseconds setup_time{}, calc_time{};
 };
@@ -68,23 +76,26 @@ SpeedResult test_speed()
   Test test;
 
   std::atomic<bool> canceled = false;
-  std::promise<std::pair<std::size_t, std::chrono::nanoseconds>> setup_promise;
+  std::promise<std::tuple<std::string, std::size_t, std::chrono::nanoseconds>> setup_promise;
   auto setup_ftr = setup_promise.get_future();
 
   std::thread setup_thr(
     [&tester, &test, &canceled, &setup_promise]() {
       Eigen::Matrix<double, Test::InputSize, 1> x;
       x.setOnes();
+      try {
+        std::size_t cntr = 0;
+        const auto beg = std::chrono::high_resolution_clock::now();
+        while (!canceled) {
+          tester.template setup([&test](const auto & x) {return test(x);}, x);
+          ++cntr;
+        }
+        const auto end = std::chrono::high_resolution_clock::now();
 
-      std::size_t cntr = 0;
-      const auto beg = std::chrono::high_resolution_clock::now();
-      while (!canceled) {
-        tester.template setup([&test](const auto & x) {return test(x);}, x);
-        ++cntr;
+        setup_promise.set_value(std::make_tuple(std::string{}, cntr, end - beg));
+      } catch (const std::exception & e) {
+        setup_promise.set_value(std::make_tuple(e.what(), 0, std::chrono::nanoseconds(0)));
       }
-      const auto end = std::chrono::high_resolution_clock::now();
-
-      setup_promise.set_value(std::make_pair(cntr, end - beg));
     });
 
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -92,14 +103,18 @@ SpeedResult test_speed()
 
   if (setup_ftr.wait_for(std::chrono::milliseconds(1000)) == std::future_status::ready) {
     setup_thr.join();
-    std::tie(res.setup_iter, res.setup_time) = setup_ftr.get();
+    std::tie(res.exception, res.setup_iter, res.setup_time) = setup_ftr.get();
   } else {
     setup_thr.detach();
     res.setup_timeout = true;
     return res;
   }
 
-  std::promise<std::pair<std::size_t, std::chrono::nanoseconds>> calc_promise;
+  if (!res.exception.empty()) {
+    return res;
+  }
+
+  std::promise<std::tuple<std::string, std::size_t, std::chrono::nanoseconds>> calc_promise;
   auto calc_ftr = calc_promise.get_future();
   canceled.store(false);
   std::thread calc_thr([&test, &tester, &canceled, &calc_promise]() {
@@ -107,15 +122,18 @@ SpeedResult test_speed()
       x.setOnes();
       typename EigenFunctor<Test, decltype(x)>::JacobianType J;
 
-      std::size_t cntr = 0;
-      const auto beg = std::chrono::high_resolution_clock::now();
-      while (!canceled) {
-        tester.template run([&test](const auto & x) {return test(x);}, x, J);
-        ++cntr;
+      try {
+        std::size_t cntr = 0;
+        const auto beg = std::chrono::high_resolution_clock::now();
+        while (!canceled) {
+          tester.template run([&test](const auto & x) {return test(x);}, x, J);
+          ++cntr;
+        }
+        const auto end = std::chrono::high_resolution_clock::now();
+        calc_promise.set_value(std::make_tuple(std::string{}, cntr, end - beg));
+      } catch (const std::exception & e) {
+        calc_promise.set_value(std::make_tuple(e.what(), 0, std::chrono::nanoseconds(0)));
       }
-      const auto end = std::chrono::high_resolution_clock::now();
-
-      calc_promise.set_value(std::make_pair(cntr, end - beg));
     });
 
   std::this_thread::sleep_for(std::chrono::milliseconds(3000));
@@ -123,7 +141,7 @@ SpeedResult test_speed()
 
   if (calc_ftr.wait_for(std::chrono::milliseconds(1000)) == std::future_status::ready) {
     calc_thr.join();
-    std::tie(res.calc_iter, res.calc_time) = calc_ftr.get();
+    std::tie(res.exception, res.calc_iter, res.calc_time) = calc_ftr.get();
   } else {
     calc_thr.detach();    // forceful termination
     res.calc_timeout = true;
