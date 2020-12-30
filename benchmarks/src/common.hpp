@@ -47,6 +47,17 @@ struct EigenFunctor
     y = func_(x);
   }
 
+  template<typename T>
+  bool operator()(const T * x, T * y) const
+  {
+    Eigen::Map<const Eigen::Matrix<T, InputsAtCompileTime, 1>> x_map(x);
+    Eigen::Map<Eigen::Matrix<T, ValuesAtCompileTime, 1>> y_map(y);
+
+    y_map = func_(x_map);
+
+    return true;
+  }
+
 private:
   _Func func_;
 };

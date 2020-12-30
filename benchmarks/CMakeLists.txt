@@ -20,6 +20,7 @@ if(SKIP_INSTALL_AD_TOOLS)
     # Add dummy targets
     add_custom_target(adept-external-install)
     add_custom_target(adolc-external-install)
+    add_custom_target(ceres-external-install)
     add_custom_target(cppad-external-install)
     add_custom_target(cppad-cg-external-install)
     add_custom_target(sacado-cg-external-install)
@@ -71,6 +72,22 @@ else()
         EXCLUDE_FROM_ALL     ON
     )
     externalproject_add_steptargets(adolc-external install)
+
+    # Download and install Ceres
+    externalproject_add(
+        ceres-external
+        GIT_REPOSITORY       git@github.com:ceres-solver/ceres-solver.git
+        GIT_TAG              2.0.0
+        GIT_SHALLOW          ON
+        GIT_CONFIG           advice.detachedHead=false
+        UPDATE_COMMAND       ""
+        UPDATE_DISCONNECTED  ON
+        CMAKE_ARGS           -DBUILD_TESTING:BOOL=OFF
+                             -DBUILD_EXAMPLES:BOOL=OFF
+                             -DCMAKE_INSTALL_PREFIX:PATH=${LOCAL_INSTALL_DIR}
+        EXCLUDE_FROM_ALL     ON
+    )
+    externalproject_add_steptargets(ceres-external install)
 
     # Download and install CppAD
     externalproject_add(
@@ -133,12 +150,17 @@ else()
     set(SKIP_INSTALL_AD_TOOLS ON CACHE BOOL "Set to skip superbuild")
 endif()
 
+
+
+find_package(Ceres 2.0 REQUIRED PATHS ${LOCAL_INSTALL_DIR}/lib/cmake)
+
 add_executable(run_speedtests
     src/run_speedtests.cpp
 )
 add_dependencies(run_speedtests
     adept-external-install
     adolc-external-install
+    ceres-external-install
     cppad-external-install
     cppad-cg-external-install
     sacado-cg-external-install
@@ -160,6 +182,7 @@ PRIVATE
 target_link_libraries(run_speedtests
     adept
     adolc
+    Ceres::ceres
     dl
     Eigen3::Eigen
     pthread

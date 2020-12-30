@@ -2,6 +2,7 @@
 #define TESTS_MANIF_HPP_
 
 #include <manif/SE3.h>
+#include <manif/ceres/constants.h>
 
 #include <random>
 #include <vector>
@@ -103,82 +104,102 @@ struct lie_operations
   template<class Fac1 = double, class Fac2 = Fac1>
   struct scale_sum2
   {
-    const Fac1 m_alpha1;
     const Fac2 m_alpha2;
 
     scale_sum2(Fac1 alpha1, Fac2 alpha2)
-    : m_alpha1(alpha1), m_alpha2(alpha2)
+    : m_alpha2(alpha2)
     {
-      if (alpha1 != 1) {
-        std::cerr << "alpha1 != 1 not supported for Lie integration" << std::endl;
-        exit(1);
+      if (alpha1 != Fac1(1.0)) {
+        std::cerr << "alpha1 != 1 not expected for Lie type" << std::endl;
+        exit(EXIT_FAILURE);
       }
     }
 
     template<class T1, class T2, class T3>
     void operator()(T1 & t1, const T2 & t2, const T3 & t3) const
     {
-      t1 = t2 + t3 * m_alpha2;
+      t1 = t2 + (t3 * m_alpha2);
     }
 
     typedef void result_type;
   };
+
 
   template<class Fac1 = double, class Fac2 = Fac1, class Fac3 = Fac2>
   struct scale_sum3
   {
-    const scale_sum2<Fac1, Fac2> ss2;
+    const Fac2 m_alpha2;
     const Fac3 m_alpha3;
 
     scale_sum3(Fac1 alpha1, Fac2 alpha2, Fac3 alpha3)
-    : ss2(alpha1, alpha2), m_alpha3(alpha3) {}
+    : m_alpha2(alpha2), m_alpha3(alpha3)
+    {
+      if (alpha1 != Fac1(1.0)) {
+        std::cerr << "alpha1 != 1 not expected for Lie type" << std::endl;
+        exit(EXIT_FAILURE);
+      }
+    }
 
     template<class T1, class T2, class T3, class T4>
     void operator()(T1 & t1, const T2 & t2, const T3 & t3, const T4 & t4) const
     {
-      ss2(t1, t2, t3);
-      t1 += t4 * m_alpha3;
+      t1 = t2 + (t3 * m_alpha2 + t4 * m_alpha3);
     }
 
     typedef void result_type;
   };
+
 
   template<class Fac1 = double, class Fac2 = Fac1, class Fac3 = Fac2, class Fac4 = Fac3>
   struct scale_sum4
   {
-    const scale_sum3<Fac1, Fac2, Fac3> ss3;
+    const Fac2 m_alpha2;
+    const Fac3 m_alpha3;
     const Fac4 m_alpha4;
 
     scale_sum4(Fac1 alpha1, Fac2 alpha2, Fac3 alpha3, Fac4 alpha4)
-    : ss3(alpha1, alpha2, alpha3), m_alpha4(alpha4) {}
+    : m_alpha2(alpha2), m_alpha3(alpha3), m_alpha4(alpha4)
+    {
+      if (alpha1 != Fac1(1.0)) {
+        std::cerr << "alpha1 != 1 not expected for Lie type" << std::endl;
+        exit(EXIT_FAILURE);
+      }
+    }
 
     template<class T1, class T2, class T3, class T4, class T5>
     void operator()(T1 & t1, const T2 & t2, const T3 & t3, const T4 & t4, const T5 & t5) const
     {
-      ss3(t1, t2, t3, t4);
-      t1 += t5 * m_alpha4;
+      t1 = t2 + (t3 * m_alpha2 + t4 * m_alpha3 + t5 * m_alpha4);
     }
 
     typedef void result_type;
   };
+
 
   template<class Fac1 = double, class Fac2 = Fac1, class Fac3 = Fac2, class Fac4 = Fac3,
     class Fac5 = Fac4>
   struct scale_sum5
   {
-    const scale_sum4<Fac1, Fac2, Fac3, Fac4> ss4;
+    const Fac2 m_alpha2;
+    const Fac3 m_alpha3;
+    const Fac4 m_alpha4;
     const Fac5 m_alpha5;
 
     scale_sum5(Fac1 alpha1, Fac2 alpha2, Fac3 alpha3, Fac4 alpha4, Fac5 alpha5)
-    : ss4(alpha1, alpha2, alpha3, alpha4), m_alpha5(alpha5) {}
+    : m_alpha2(alpha2), m_alpha3(alpha3), m_alpha4(alpha4), m_alpha5(alpha5)
+    {
+      if (alpha1 != Fac1(1.0)) {
+        std::cerr << "alpha1 != 1 not expected for Lie type" << std::endl;
+        exit(EXIT_FAILURE);
+      }
+    }
 
     template<class T1, class T2, class T3, class T4, class T5, class T6>
     void operator()(
       T1 & t1, const T2 & t2, const T3 & t3, const T4 & t4, const T5 & t5,
       const T6 & t6) const
     {
-      ss4(t1, t2, t3, t4, t5);
-      t1 += t6 * m_alpha5;
+      t1 = t2 + (t3 * m_alpha2 + t4 * m_alpha3 + t5 * m_alpha4 + t6 * m_alpha5);
     }
 
     typedef void result_type;
@@ -354,13 +375,7 @@ struct SE3Integrator
     );
 
     const manif::SE3<scalar_t> Pfinal_c = Pfinal.template cast<scalar_t>();
-    const manif::SE3<scalar_t> dP = P.inverse() * Pfinal_c;
-
-    const manif::SE3Tangent<scalar_t> ldP = dP.log();
-
-    // return (P - Pfinal_c).coeffs();
-
-    return Eigen::Matrix<scalar_t, 6, 1>::Zero();
+    return (P - Pfinal_c).coeffs();
   }
 
 private:
