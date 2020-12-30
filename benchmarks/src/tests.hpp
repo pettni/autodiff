@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <random>
 #include <utility>
+#include <vector>
+
+#include "se3.hpp"
 
 
 /**
@@ -77,7 +80,7 @@ struct SumOfSquares
 
 
 /**
- * Integrate an N-order integrator for 100 steps using a runge-kutta scheme
+ * Integrate an N-order integrator for 100 steps using a RK4 scheme
  *
  * f: R^N -> R^N
  */
@@ -181,5 +184,187 @@ private:
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
+
+
+/**
+ * Camera reprojection error for N points
+ *
+ * f: R^6 -> R^2N
+ *
+ * f(x)(2*i, 2*i+1) = ( x_C_i - proj(CM * (P_CW * exp(x)) * x_W_i) ) .^ 2
+ *
+ * where - x_C_i the i:th 2d pixel point
+ *       - x_W_i the i:th 3d world point
+ *       - P_CW a nominal camera pose
+ *       - x is a tangent space element defining an incremental pose
+ */
+template<std::size_t _N>
+struct ReprojectionError
+{
+  static constexpr char name[] = "Reprojection";
+  static constexpr std::size_t N = _N;
+  static constexpr std::size_t InputSize = 6;  //
+
+  ReprojectionError()
+  {
+    // nominal pose
+    P_CW_nom = SE3<double>{
+      Eigen::Quaterniond::Identity(),
+      Eigen::Vector3d{0.1, -0.3, 0.2}
+    };
+
+    // camera matrix
+    CM.setZero();
+    CM(0, 0) = 700;  // fx
+    CM(1, 1) = 690;  // fy
+    CM(0, 2) = 320;  // cx
+    CM(1, 2) = 240;  // cy
+    CM(2, 2) = 1;
+
+    // generate random data
+    std::minstd_rand gen(101);  // fixed seed
+    std::normal_distribution<double> dis(0, 1);
+    auto gen_fcn = [&]() {return dis(gen);};
+
+    for (std::size_t i = 0; i != N; ++i) {
+      pts_world[i] = Eigen::Vector3d{0, 0, 3} + Eigen::Vector3d::NullaryExpr(gen_fcn);
+      Eigen::Vector3d proj = CM * (P_CW_nom * pts_world[i]);
+      pts_image[i] = proj.template head<2>() / proj(2);
+    }
+  }
+
+  template<typename Derived>
+  Eigen::Matrix<typename Derived::Scalar, 2 * N, 1>
+  operator()(const Eigen::MatrixBase<Derived> & x) const
+  {
+    using Scalar = typename Derived::Scalar;
+    using Vec3 = Eigen::Matrix<Scalar, 3, 1>;
+    using Quat = Eigen::Quaternion<Scalar>;
+
+    SE3<Scalar> P_CW = SE3<Scalar>::exp(Scalar{0.01} * x) * P_CW_nom.template cast<Scalar>();
+    auto CMc = CM.template cast<Scalar>().eval();
+
+    // Transform world points to camera frame, re-project, square
+    Eigen::Matrix<Scalar, 2 * N, 1> ret;
+    for (std::size_t i = 0; i != N; ++i) {
+      Vec3 proj = CMc * (P_CW * pts_world[i].template cast<Scalar>().eval());
+      ret.template segment<2>(2 * i) =
+        (proj.template head<2>() / proj(2) - pts_image[i].template cast<Scalar>()).cwiseAbs2();
+    }
+    return ret;
+  }
+
+private:
+  Eigen::Matrix<double, 3, 3> CM;            // camera matrix
+  SE3<double> P_CW_nom{};                    // nominal camera pose
+  std::array<Eigen::Vector3d, N> pts_world;  // points in world frame
+  std::array<Eigen::Vector2d, N> pts_image;  // points in image plane
+
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+};
+
+
+/**
+ * Differentiate the end effector position in an N link robotic arm
+ *
+ * f: R^6 -> R^6
+ */
+template<std::size_t _N>
+struct Manipulator
+{
+  static constexpr char name[] = "Manipulator";
+  static constexpr std::size_t N = _N;
+  static constexpr std::size_t InputSize = 6;
+
+  Manipulator()
+  {
+    // generate random link positions
+    std::minstd_rand gen(101);  // fixed seed
+    std::uniform_real_distribution<double> dis(-1, 1);
+    auto gen_fcn = [&]() {return dis(gen);};
+
+    for (std::size_t i = 0; i != N; ++i) {
+      link_pose.push_back(
+        SE3<double>{
+        Eigen::AngleAxis(M_PI_2 * dis(gen), Eigen::Vector3d::UnitX()) *
+        Eigen::AngleAxis(M_PI_2 * dis(gen), Eigen::Vector3d::UnitY()) *
+        Eigen::AngleAxis(M_PI_2 * dis(gen), Eigen::Vector3d::UnitZ()),
+        Eigen::Vector3d{2 * dis(gen), 2 * dis(gen), 2 * dis(gen)}
+      });
+    }
+  }
+
+  template<typename Derived>
+  Eigen::Matrix<typename Derived::Scalar, 3, 1>
+  operator()(const Eigen::MatrixBase<Derived> & x) const
+  {
+    using Scalar = typename Derived::Scalar;
+    SE3<Scalar> P = SE3<Scalar>::exp(x);
+
+    for (std::size_t i = 0; i != N; ++i) {
+      P *= link_pose[i].template cast<Scalar>();
+    }
+
+    return P * Eigen::Matrix<Scalar, 3, 1>::UnitX().eval();
+  }
+
+private:
+  std::vector<SE3<double>> link_pose{};
+};
+
+
+/**
+ * Integrate a system on SE(3) for N steps using the RK4 scheme
+ *
+ * f: R^6 -> R^6
+ */
+template<std::size_t _N>
+struct SE3ODE
+{
+  static constexpr char name[] = "SE3ODE";
+  static constexpr std::size_t N = _N;
+  static constexpr std::size_t InputSize = 6;
+
+  SE3Integrator()
+  {
+    velocity << 0.1, -0.2, 0.3, 0.1, -0.2, 0.3;
+    Pfinal = SE3<double>{} * SE3<double>::exp(static_cast<double>(N) * 0.01 * velocity);
+  }
+
+  template<typename Derived>
+  Eigen::Matrix<typename Derived::Scalar, 6, 1>
+  operator()(const Eigen::MatrixBase<Derived> & x) const
+  {
+    using scalar_t = typename Derived::Scalar;
+    using state_t = SE3<scalar_t>;
+    using deriv_t = typename state_t::Tangent;
+
+    const auto vel_c = velocity.template cast<scalar_t>().eval();
+
+    // set initial pose
+    SE3<scalar_t> P = SE3<scalar_t>::exp(x);
+
+    boost::numeric::odeint::integrate_n_steps(
+      boost::numeric::odeint::runge_kutta4<state_t, scalar_t, deriv_t, scalar_t,
+      boost::numeric::odeint::vector_space_algebra, lie_operations>{},
+      [&vel_c](const state_t & X, deriv_t & dXdt, const scalar_t) {
+        dXdt = vel_c;
+      },
+      P, scalar_t{0.}, scalar_t{0.01}, N
+    );
+
+    const SE3<scalar_t> Pfinalinv = Pfinal.inv().template cast<scalar_t>();
+    return (Pfinalinv * P).log();
+  }
+
+private:
+  Eigen::Matrix<double, 6, 1> velocity;
+  SE3<double> Pfinal{};
+
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
 
 #endif  // TESTS_HPP_

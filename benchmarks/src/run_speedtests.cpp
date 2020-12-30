@@ -1,34 +1,40 @@
 /*
-TESTING RULES
+PURPOSE
 
-* Task: compute jacobians
-* Input/output sizes known at compile time (benefits forward functions)
-* No multithreading (benefits autodiff which does not support it)
-* For tape methods employ all available optimization in the setup step
+* Evaluate speed of computing
+
+RULES
+
+* Input/output sizes known at compile time (benefits forward methods)
+* No multithreading
+* For tape methods employ all available optimization in the recording step
 
 TESTS
 
 * Support variable sized inputs
-* Can assume all inputs are positive
 * No branching (if/else) allowed
 
-TODO
-
-* Add Ceres
-
-OTHER BENCHMARKS
+OTHER BENCHMARKS (CODE)
 
 * Adept benchmarks: https://github.com/rjhogan/Adept-2/tree/master/benchmark
-* 2015 paper w/ code: https://github.com/microsoft/ADBench
-  - Adept, ADOL-C, Ceres
-* Robotics dynamics: https://arxiv.org/abs/1709.03799
-  - CppAD, CppAD-CG
+* Ceres benchmarks: https://github.com/ceres-solver/ceres-solver/tree/master/internal/ceres/autodiff_benchmarks
+* "A Benchmark of Selected Algorithmic Differentiation Tools on Some Problems in Computer Vision and Machine Learning"
+  - Paper: https://arxiv.org/abs/1807.10129
+  - Code: https://github.com/microsoft/ADBench
+  - Tools: Adept, ADOL-C, Ceres
+* "Automatic Differentiation of Rigid Body Dynamics for Optimal Control and Estimation"
+  - Paper: https://arxiv.org/abs/1709.03799
+  - Tools: CppAD, CppAD-CG
+
+TODOS
+
+* Add option for dynamic-sized tests
 
 AD TOOLS NOT IN BENCHMARK
 
 * boost::math::differentiation     (Seems incompatible with array math)
 * Enzime: https://enzyme.mit.edu/  (Clang compiler only)
-* Fadbad: http://www.fadbad.com    (Seems unmaintained + Sacado claims to be successor)
+* Fadbad: http://www.fadbad.com    (Seems unmaintained + Sacado claims to be faster successor)
 * dco/c++                          (Non-free license)
 
 */
@@ -44,6 +50,7 @@ AD TOOLS NOT IN BENCHMARK
 #include "adept_tester.hpp"
 #include "adolc_testers.hpp"
 #include "autodiff_testers.hpp"
+#include "ceres_tester.hpp"
 #include "cppadcg_tester.hpp"  // must be before cppad_tester
 #include "cppad_tester.hpp"
 #include "numerical_tester.hpp"
@@ -127,11 +134,12 @@ void run_tests()
 
 int main()
 {
-  // these can run all tests without (but do not necessarily succeed)
+  // these can run all tests (but do not necessarily succeed)
   run_tests<TypePack<
       AdeptTester,
       AdolcTester,
       AutodiffFwdTester,
+      AutodiffRevTester,
       CppADTester,
       CppADCGTester,
       NumericalTester,
@@ -145,25 +153,42 @@ int main()
       NeuralNet<3>,
       ReprojectionError<3>,
       Manipulator<3>,
-      SE3Integrator<3>
+      SE3ODE<3>
     >
   >();
 
-  // compilation issue with the autodiff reverse type
+  // Ceres can't handle all tests
   run_tests<TypePack<
-      AutodiffRevTester
+      CeresTester
     >,
     TypePack<
       ConstantNtoN<3>,
       CoefficientWise<3>,
       SumOfSquares<3>,
-      // ODE<3>,                 // times out
+      // ODE<3>,               // double -> Jet not defined (required in boost)
       NeuralNet<3>,
       ReprojectionError<3>,
       Manipulator<3>
-      // SE3Integrator<3>        // compile time invalid product
+      // SE3ODE<3>      // double -> Jet not defined (required in boost)
     >
   >();
+
+
+  // // Autodiff-rev can't run all tests
+  // run_tests<TypePack<
+  //     AutodiffRevTester
+  //   >,
+  //   TypePack<
+  //     ConstantNtoN<3>,
+  //     CoefficientWise<3>,
+  //     SumOfSquares<3>,
+  //     // ODE<3>,               // times out
+  //     NeuralNet<3>,
+  //     ReprojectionError<3>,
+  //     Manipulator<3>
+  //     // SE3ODE<3>      // times out
+  //   >
+  // >();
 
   return 0;
 }
