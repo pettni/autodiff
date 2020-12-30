@@ -129,6 +129,7 @@ int main()
 {
   // these can run all tests without (but do not necessarily succeed)
   run_tests<TypePack<
+      AdeptTester,
       AdolcTester,
       AutodiffFwdTester,
       CppADTester,
@@ -147,23 +148,6 @@ int main()
       SE3Integrator<3>
     >
   >();
-
-  // adept has issues together with manif (probably the Constants trait )
-  run_tests<TypePack<
-      AdeptTester
-    >,
-    TypePack<
-      ConstantNtoN<3>,
-      CoefficientWise<3>,
-      SumOfSquares<3>,
-      ODE<3>,
-      NeuralNet<3>
-      // ReprojectionError<3>    // segmentation fault
-      // Manipulator<3>          // segmentation fault
-      // SE3Integrator<3>        // segmentation faule
-    >
-  >();
-
 
   // compilation issue with the autodiff reverse type
   run_tests<TypePack<

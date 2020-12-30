@@ -7,108 +7,95 @@
 #include <vector>
 
 
-// namespace manif
-// {
+namespace manif
+{
 
-// template<typename _Scalar>
-// struct Constants<adept::Active<_Scalar>>
-// {
-//   static const adept::Active<_Scalar> eps;
-//   static const adept::Active<_Scalar> eps_s;
-// };
-
-// template<typename _Scalar>
-// const adept::Active<_Scalar>
-// Constants<adept::Active<_Scalar>>::eps = 1e-10;
-
-// template<typename _Scalar>
-// const adept::Active<_Scalar>
-// Constants<adept::Active<_Scalar>>::eps_s = 1e-15;
+// for Adept
+template<typename _Scalar>
+struct Constants<adept::Active<_Scalar>>
+{
+  static constexpr double eps = 1e-10;
+  static constexpr double eps_s = 1e-15;
+};
 
 
-// // for ADOL-C
-// template<>
-// struct Constants<adtl::adouble>
-// {
-//   static const adtl::adouble eps;
-//   static const adtl::adouble eps_s;
-// };
-
-// const adtl::adouble
-// Constants<adtl::adouble>::eps = adtl::adouble(1e-10);
-
-// const adtl::adouble
-// Constants<adtl::adouble>::eps_s = adtl::adouble(1e-15);
+// for ADOL-C
+template<>
+struct Constants<adtl::adouble>
+{
+  static constexpr double eps = 1e-10;
+  static constexpr double eps_s = 1e-15;
+};
 
 
-// // for autodiff dual
-// template<typename _Scalar>
-// struct Constants<autodiff::forward::Dual<_Scalar, _Scalar>>
-// {
-//   static const autodiff::forward::Dual<_Scalar, _Scalar> eps;
-//   static const autodiff::forward::Dual<_Scalar, _Scalar> eps_s;
-// };
+// for autodiff dual
+template<typename _Scalar>
+struct Constants<autodiff::forward::Dual<_Scalar, _Scalar>>
+{
+  static const autodiff::forward::Dual<_Scalar, _Scalar> eps;
+  static const autodiff::forward::Dual<_Scalar, _Scalar> eps_s;
+};
 
-// template<typename _Scalar>
-// const autodiff::forward::Dual<_Scalar, _Scalar>
-// Constants<autodiff::forward::Dual<_Scalar, _Scalar>>::eps = autodiff::forward::Dual<_Scalar,
-//     _Scalar>(1e-10);
+template<typename _Scalar>
+const autodiff::forward::Dual<_Scalar, _Scalar>
+Constants<autodiff::forward::Dual<_Scalar, _Scalar>>::eps = autodiff::forward::Dual<_Scalar,
+    _Scalar>(1e-10);
 
-// template<typename _Scalar>
-// const autodiff::forward::Dual<_Scalar, _Scalar>
-// Constants<autodiff::forward::Dual<_Scalar, _Scalar>>::eps_s = autodiff::forward::Dual<_Scalar,
-//     _Scalar>(1e-15);
-
-
-// // for autodiff var
-// template<>
-// struct Constants<autodiff::var>
-// {
-//   static const autodiff::var eps;
-//   static const autodiff::var eps_s;
-// };
-
-// const autodiff::var
-// Constants<autodiff::var>::eps = autodiff::var(1e-10);
-
-// const autodiff::var
-// Constants<autodiff::var>::eps_s = autodiff::var(1e-15);
+template<typename _Scalar>
+const autodiff::forward::Dual<_Scalar, _Scalar>
+Constants<autodiff::forward::Dual<_Scalar, _Scalar>>::eps_s = autodiff::forward::Dual<_Scalar,
+    _Scalar>(1e-15);
 
 
-// // for autodiff var
-// template<typename _Scalar>
-// struct Constants<CppAD::AD<_Scalar>>
-// {
-//   static const CppAD::AD<_Scalar> eps;
-//   static const CppAD::AD<_Scalar> eps_s;
-// };
+// for autodiff var
+template<>
+struct Constants<autodiff::var>
+{
+  static const autodiff::var eps;
+  static const autodiff::var eps_s;
+};
 
-// template<typename _Scalar>
-// const CppAD::AD<_Scalar>
-// Constants<CppAD::AD<_Scalar>>::eps = CppAD::AD<_Scalar>(1e-10);
+const autodiff::var
+Constants<autodiff::var>::eps = autodiff::var(1e-10);
 
-// template<typename _Scalar>
-// const CppAD::AD<_Scalar>
-// Constants<CppAD::AD<_Scalar>>::eps_s = CppAD::AD<_Scalar>(1e-15);
+const autodiff::var
+Constants<autodiff::var>::eps_s = autodiff::var(1e-15);
 
 
-// // for sacado
-// template<typename _Scalar>
-// struct Constants<Sacado::Fad::DFad<_Scalar>>
-// {
-//   static const Sacado::Fad::DFad<_Scalar> eps;
-//   static const Sacado::Fad::DFad<_Scalar> eps_s;
-// };
+// for CppAD::AD
+template<typename _Scalar>
+struct Constants<CppAD::AD<_Scalar>>
+{
+  static const CppAD::AD<_Scalar> eps;
+  static const CppAD::AD<_Scalar> eps_s;
+};
 
-// template<typename _Scalar>
-// const Sacado::Fad::DFad<_Scalar>
-// Constants<Sacado::Fad::DFad<_Scalar>>::eps = Sacado::Fad::DFad<_Scalar>(1e-10);
+template<typename _Scalar>
+const CppAD::AD<_Scalar>
+Constants<CppAD::AD<_Scalar>>::eps = CppAD::AD<_Scalar>(1e-10);
 
-// template<typename _Scalar>
-// const Sacado::Fad::DFad<_Scalar>
-// Constants<Sacado::Fad::DFad<_Scalar>>::eps_s = Sacado::Fad::DFad<_Scalar>(1e-15);
+template<typename _Scalar>
+const CppAD::AD<_Scalar>
+Constants<CppAD::AD<_Scalar>>::eps_s = CppAD::AD<_Scalar>(1e-15);
 
-// } /* namespace manif */
+
+// for sacado
+template<typename _Scalar>
+struct Constants<Sacado::Fad::DFad<_Scalar>>
+{
+  static const Sacado::Fad::DFad<_Scalar> eps;
+  static const Sacado::Fad::DFad<_Scalar> eps_s;
+};
+
+template<typename _Scalar>
+const Sacado::Fad::DFad<_Scalar>
+Constants<Sacado::Fad::DFad<_Scalar>>::eps = Sacado::Fad::DFad<_Scalar>(1e-10);
+
+template<typename _Scalar>
+const Sacado::Fad::DFad<_Scalar>
+Constants<Sacado::Fad::DFad<_Scalar>>::eps_s = Sacado::Fad::DFad<_Scalar>(1e-15);
+
+} /* namespace manif */
 
 
 struct lie_operations
@@ -367,7 +354,13 @@ struct SE3Integrator
     );
 
     const manif::SE3<scalar_t> Pfinal_c = Pfinal.template cast<scalar_t>();
-    return (P - Pfinal_c).coeffs();
+    const manif::SE3<scalar_t> dP = P.inverse() * Pfinal_c;
+
+    const manif::SE3Tangent<scalar_t> ldP = dP.log();
+
+    // return (P - Pfinal_c).coeffs();
+
+    return Eigen::Matrix<scalar_t, 6, 1>::Zero();
   }
 
 private:

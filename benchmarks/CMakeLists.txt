@@ -164,12 +164,4 @@ target_link_libraries(run_speedtests
     Eigen3::Eigen
     pthread
     sacado
-#     kokkoscontainers
-#     kokkoscore
-#     teuchoscomm
-    # teuchoscore
-#     teuchoskokkoscomm
-#     teuchoskokkoscompat
-#     teuchosparameterlist
-#     teuchosparser
 )
