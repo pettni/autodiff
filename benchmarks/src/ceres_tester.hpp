@@ -26,12 +26,12 @@ public:
     using Scalar = typename Derived::Scalar;
 
     EigenFunctor<Func, Derived> func(std::forward<Func>(f));
-    typename EigenFunctor<Func, Derived>::JacobianTypeRow Jrow;
+    typename EigenFunctor<Func, Derived>::JacobianTypeRowMajor Jrow;
 
     const Scalar * prms[1] = {x.data()};
     double ** jac_cols = new double *[func.values()];
     for (size_t i = 0; i < func.values(); i++) {
-      jac_cols[i] = Jrow.data() + func.values() * i;
+      jac_cols[i] = Jrow.col(i).data();
     }
 
     Scalar F{};

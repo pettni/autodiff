@@ -15,16 +15,16 @@
 
 
 /**
- * Return a constant vector
+ * Return a constant vector of size N
  *
- * f: R^N -> R^N
+ * f: R -> R^N
  */
 template<std::size_t _N>
-struct ConstantNtoN
+struct Constant
 {
-  static constexpr char name[] = "ConstantNtoN";
+  static constexpr char name[] = "Constant";
   static constexpr std::size_t N = _N;
-  static constexpr std::size_t InputSize = N;
+  static constexpr std::size_t InputSize = 1;
 
   template<typename Derived>
   Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
@@ -36,37 +36,14 @@ struct ConstantNtoN
 
 
 /**
- * Apply a series of coefficient-wise operations
- *
- * f: R^N -> R^N
- */
-template<std::size_t _N>
-struct CoefficientWise
-{
-  static constexpr char name[] = "CoefficientWise";
-  static constexpr std::size_t N = _N;
-  static constexpr std::size_t InputSize = N;
-
-  template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, Derived::RowsAtCompileTime, 1>
-  operator()(const Eigen::MatrixBase<Derived> & x) const
-  {
-    return (x + x.cwiseInverse()).array().sin().matrix();
-  }
-};
-
-
-/**
- * Calculate the sum of squares of the input vector
+ * Apply a series of coefficient-wise operations and sum the result
  *
  * f: R^N -> R
- *
- * f(x) = \sum_i x(i)^2
  */
 template<std::size_t _N>
-struct SumOfSquares
+struct ManyToOne
 {
-  static constexpr char name[] = "SumOfSquares";
+  static constexpr char name[] = "ManyToOne";
   static constexpr std::size_t N = _N;
   static constexpr std::size_t InputSize = N;
 
@@ -74,7 +51,44 @@ struct SumOfSquares
   Eigen::Matrix<typename Derived::Scalar, 1, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
-    return Eigen::Matrix<typename Derived::Scalar, 1, 1>(x.cwiseAbs2().sum());
+    return Eigen::Matrix<typename Derived::Scalar, 1, 1>(
+      (x + x.cwiseInverse()).array().sin().matrix().sum()
+    );
+  }
+};
+
+
+/**
+ * Compute series x_{y+2} = sin(cos(x_y))
+ *
+ * f: R -> R^N
+ */
+template<std::size_t _N>
+struct OneToMany
+{
+  static constexpr char name[] = "OneToMany";
+  static constexpr std::size_t N = _N;
+  static constexpr std::size_t InputSize = 1;
+
+  template<typename Derived>
+  Eigen::Matrix<typename Derived::Scalar, N, 1>
+  operator()(const Eigen::MatrixBase<Derived> & x) const
+  {
+    using std::sin, std::cos;
+
+    using Scalar = typename Derived::Scalar;
+    static constexpr int ValuesAtCompileTime =
+      Derived::RowsAtCompileTime == -1 ? -1 : static_cast<int>(N);
+    Eigen::Matrix<Scalar, ValuesAtCompileTime, 1> ret(N);
+    ret(0) = x(0);
+    for (std::size_t i = 0; i < N - 1; ++i) {
+      if (i % 2 == 0) {
+        ret(i + 1) = sin(ret(i));
+      } else {
+        ret(i + 1) = cos(ret(i));
+      }
+    }
+    return ret;
   }
 };
 
@@ -132,8 +146,9 @@ public:
 /**
  * Three-layer fully connected neural network with one channel and tanh activations
  *
- * f: R^N -> R
+ * Weights are statically allocated
  *
+ * f: R^N -> R
  */
 template<std::size_t _N>
 struct NeuralNet
@@ -189,7 +204,7 @@ public:
 /**
  * Camera reprojection error for N points
  *
- * f: R^6 -> R^2N
+ * f: R^6 -> R
  *
  * f(x)(2*i, 2*i+1) = ( x_C_i - proj(CM * (P_CW * exp(x)) * x_W_i) ) .^ 2
  *
@@ -234,7 +249,7 @@ struct ReprojectionError
   }
 
   template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, 2 * N, 1>
+  Eigen::Matrix<typename Derived::Scalar, 1, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
     using Scalar = typename Derived::Scalar;
@@ -245,11 +260,11 @@ struct ReprojectionError
     auto CMc = CM.template cast<Scalar>().eval();
 
     // Transform world points to camera frame, re-project, square
-    Eigen::Matrix<Scalar, 2 * N, 1> ret;
+    Eigen::Matrix<Scalar, 1, 1> ret(0);
     for (std::size_t i = 0; i != N; ++i) {
       Vec3 proj = CMc * (P_CW * pts_world[i].template cast<Scalar>().eval());
-      ret.template segment<2>(2 * i) =
-        (proj.template head<2>() / proj(2) - pts_image[i].template cast<Scalar>()).cwiseAbs2();
+      ret(0) +=
+        (proj.template head<2>() / proj(2) - pts_image[i].template cast<Scalar>()).squaredNorm();
     }
     return ret;
   }
@@ -285,13 +300,12 @@ struct Manipulator
     auto gen_fcn = [&]() {return dis(gen);};
 
     for (std::size_t i = 0; i != N; ++i) {
-      link_pose.push_back(
-        SE3<double>{
+      link_pose[i] = SE3<double>{
         Eigen::AngleAxis(M_PI_2 * dis(gen), Eigen::Vector3d::UnitX()) *
         Eigen::AngleAxis(M_PI_2 * dis(gen), Eigen::Vector3d::UnitY()) *
         Eigen::AngleAxis(M_PI_2 * dis(gen), Eigen::Vector3d::UnitZ()),
         Eigen::Vector3d{2 * dis(gen), 2 * dis(gen), 2 * dis(gen)}
-      });
+      };
     }
   }
 
@@ -310,7 +324,7 @@ struct Manipulator
   }
 
 private:
-  std::vector<SE3<double>> link_pose{};
+  std::array<SE3<double>, N> link_pose;
 };
 
 
@@ -326,7 +340,7 @@ struct SE3ODE
   static constexpr std::size_t N = _N;
   static constexpr std::size_t InputSize = 6;
 
-  SE3Integrator()
+  SE3ODE()
   {
     velocity << 0.1, -0.2, 0.3, 0.1, -0.2, 0.3;
     Pfinal = SE3<double>{} * SE3<double>::exp(static_cast<double>(N) * 0.01 * velocity);

@@ -31,9 +31,8 @@ public:
   {
     Eigen::VectorXd x_dyn = x;
     auto j_ad = f_ad.Jacobian(x_dyn);
-
-    J = Eigen::Map<typename EigenFunctor<Func, Derived>::JacobianTypeRow>(
-      j_ad.data(), j_ad.size() / x.size(), x.size()
+    J = Eigen::Map<typename EigenFunctor<Func, Derived>::JacobianTypeRowMajor>(
+      j_ad.data(), f_ad.Range(), f_ad.Domain()
     );
   }
 

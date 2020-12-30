@@ -3,12 +3,15 @@
 
 #include <utility>
 
+# include "common.hpp"
+
 #ifdef ADOLC_NO_TAPING
 
 # include <unsupported/Eigen/AdolcForward>
-# include "common.hpp"
 
-
+/**
+ * @brief Use ADOL-C in no-taping forward mode
+ */
 class AdolcTester
 {
 public:
@@ -38,6 +41,12 @@ public:
 
 # include <adolc/adolc.h>
 
+
+/**
+ * @brief Use ADOL-C in classical taping mode
+ *
+ * Segfaults on OneToMany (reason not investigated)
+ */
 class AdolcTester
 {
 public:
@@ -46,20 +55,23 @@ public:
   template<typename Func, typename Derived>
   void setup(Func && f, const Eigen::PlainObjectBase<Derived> & x)
   {
+    EigenFunctor<Func, Derived> func(std::forward<Func>(f));
+
+    num_outputs = func.values();
+
     trace_on(0);
 
     adouble * ax = new adouble[x.size()];
-    double * y = new double[x.size()];
-    adouble * ay = new adouble[x.size()];
+    double * y = new double[num_outputs];
+    adouble * ay = new adouble[num_outputs];
 
     for (size_t i = 0; i < x.size(); i++) {
       ax[i] <<= x(i);
     }
 
-    Eigen::Map<const Eigen::Matrix<adouble, -1, 1>> ax_map(ax, x.size());
-    Eigen::Map<Eigen::Matrix<adouble, -1, 1>>(ay, x.size()) = f(ax_map);
+    func(ax, ay);
 
-    for (size_t i = 0; i < x.size(); i++) {
+    for (size_t i = 0; i < num_outputs; i++) {
       y[i] = 0;
       ay[i] >>= y[i];
     }
@@ -77,16 +89,18 @@ public:
     const Eigen::PlainObjectBase<Derived> & x,
     typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
-    double ** rows = new double *[x.size()];
-
-    for (size_t i = 0; i < Derived::RowsAtCompileTime; i++) {
-      rows[i] = J.data() + Derived::RowsAtCompileTime * i;
+    double ** jac_rows = new double *[x.size()];
+    for (size_t i = 0; i < x.size(); i++) {
+      jac_rows[i] = J.row(i).data();
     }
 
-    jacobian(0, Derived::RowsAtCompileTime, Derived::RowsAtCompileTime, x.data(), rows);
+    jacobian(0, num_outputs, x.size(), x.data(), jac_rows);
 
-    delete[] rows;
+    delete[] jac_rows;
   }
+
+private:
+  int num_outputs;
 };
 
 #endif  // ADOLC_NO_TAPING

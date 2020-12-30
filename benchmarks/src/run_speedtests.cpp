@@ -1,7 +1,7 @@
 /*
 PURPOSE
 
-* Evaluate speed of computing
+* Evaluate speed of computing dense jacobians
 
 RULES
 
@@ -56,20 +56,20 @@ AD TOOLS NOT IN BENCHMARK
 #include "numerical_tester.hpp"
 #include "sacado_tester.hpp"
 
-#include "tests.hpp"
-#include "tests_manif.hpp"
-
 #include "test_utils.hpp"
+#include "tests.hpp"
 
 template<typename Tester, typename Test>
 void run_speedtest()
 {
   auto res = test_speed<Tester, Test>();
 
+  std::string name = std::string(Test::name) + "<" + std::to_string(Test::N) + ">";
+
   if (res.calc_timeout || res.setup_timeout) {
     std::cerr <<
       std::left << std::setw(20) << Tester::name <<
-      std::left << std::setw(20) << Test::name <<
+      std::left << std::setw(20) << name <<
       "TIMEOUT (DETACHED)" <<
       std::endl;
     return;
@@ -79,7 +79,7 @@ void run_speedtest()
   if (!res.exception.empty()) {
     std::cerr <<
       std::left << std::setw(20) << Tester::name <<
-      std::left << std::setw(20) << Test::name <<
+      std::left << std::setw(20) << name <<
       "EXCEPTION: " << res.exception <<
       std::endl;
     return;
@@ -89,15 +89,14 @@ void run_speedtest()
   if (!test_correctness<Tester, NumericalTester, Test>()) {
     std::cerr <<
       std::left << std::setw(20) << Tester::name <<
-      std::left << std::setw(20) << Test::name <<
+      std::left << std::setw(20) << name <<
       "CORRECTNESS ERROR" <<
       std::endl;
   }
 
   std::cout <<
     std::left << std::setw(20) << Tester::name <<
-    std::left << std::setw(20) << Test::name <<
-    std::left << std::setw(5) << Test::N <<
+    std::left << std::setw(20) << name <<
     std::setprecision(2) <<
     std::right << std::setw(10) << std::scientific <<
     static_cast<double>(res.setup_time.count()) / res.setup_iter <<
@@ -134,61 +133,75 @@ void run_tests()
 
 int main()
 {
+  using AllTests = TypePack<
+    Constant<3>,
+    Constant<10>,
+    Constant<1000>,
+    ManyToOne<3>,
+    ManyToOne<10>,
+    ManyToOne<1000>,
+    OneToMany<3>,
+    OneToMany<10>,
+    OneToMany<1000>,
+    ODE<3>,
+    ODE<7>,
+    ODE<20>,
+    NeuralNet<3>,
+    NeuralNet<7>,
+    NeuralNet<20>,
+    ReprojectionError<3>,
+    ReprojectionError<10>,
+    ReprojectionError<1000>,
+    Manipulator<3>,
+    Manipulator<10>,
+    Manipulator<100>,
+    SE3ODE<3>,
+    SE3ODE<10>,
+    SE3ODE<1000>
+  >;
+
+  using AllTestsNoODE = TypePack<
+    Constant<3>,
+    Constant<10>,
+    Constant<1000>,
+    ManyToOne<3>,
+    ManyToOne<10>,
+    ManyToOne<1000>,
+    OneToMany<3>,
+    OneToMany<10>,
+    OneToMany<1000>,
+    NeuralNet<3>,
+    NeuralNet<7>,
+    NeuralNet<20>,
+    ReprojectionError<3>,
+    ReprojectionError<10>,
+    ReprojectionError<1000>,
+    Manipulator<3>,
+    Manipulator<10>,
+    Manipulator<100>
+  >;
+
   // these can run all tests (but do not necessarily succeed)
   run_tests<TypePack<
       AdeptTester,
       AdolcTester,
       AutodiffFwdTester,
-      AutodiffRevTester,
       CppADTester,
       CppADCGTester,
       NumericalTester,
       SacadoTester
     >,
-    TypePack<
-      ConstantNtoN<3>,
-      CoefficientWise<3>,
-      SumOfSquares<3>,
-      ODE<3>,
-      NeuralNet<3>,
-      ReprojectionError<3>,
-      Manipulator<3>,
-      SE3ODE<3>
-    >
+    AllTests
   >();
 
-  // Ceres can't handle all tests
+  // * Ceres can't handle ODE tests because no conversion double -> Jet (required inside boost)
+  // * AutodiffRev times out on ODE tests
   run_tests<TypePack<
+      AutodiffRevTester,
       CeresTester
     >,
-    TypePack<
-      ConstantNtoN<3>,
-      CoefficientWise<3>,
-      SumOfSquares<3>,
-      // ODE<3>,               // double -> Jet not defined (required in boost)
-      NeuralNet<3>,
-      ReprojectionError<3>,
-      Manipulator<3>
-      // SE3ODE<3>      // double -> Jet not defined (required in boost)
-    >
+    AllTestsNoODE
   >();
-
-
-  // // Autodiff-rev can't run all tests
-  // run_tests<TypePack<
-  //     AutodiffRevTester
-  //   >,
-  //   TypePack<
-  //     ConstantNtoN<3>,
-  //     CoefficientWise<3>,
-  //     SumOfSquares<3>,
-  //     // ODE<3>,               // times out
-  //     NeuralNet<3>,
-  //     ReprojectionError<3>,
-  //     Manipulator<3>
-  //     // SE3ODE<3>      // times out
-  //   >
-  // >();
 
   return 0;
 }

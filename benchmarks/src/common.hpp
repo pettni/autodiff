@@ -6,6 +6,9 @@
 #include <utility>
 
 
+/**
+ * @brief Functor that wraps a callable with multiple forms of operator()
+ */
 template<typename _Func, typename _InputType>
 struct EigenFunctor
 {
@@ -20,8 +23,9 @@ struct EigenFunctor
     Scalar, ValueType::SizeAtCompileTime, InputType::SizeAtCompileTime
   >;
 
-  using JacobianTypeRow = Eigen::Matrix<
-    Scalar, ValueType::SizeAtCompileTime, InputType::SizeAtCompileTime, Eigen::RowMajor
+  using JacobianTypeRowMajor = Eigen::Matrix<
+    Scalar, ValueType::SizeAtCompileTime, InputType::SizeAtCompileTime,
+    InputType::SizeAtCompileTime == 1 ? Eigen::ColMajor : Eigen::RowMajor
   >;
 
   int values_ = ValueType::SizeAtCompileTime;  // must be changed for dynamic sizing
@@ -30,28 +34,41 @@ struct EigenFunctor
   : func_(std::forward<_Func>(func))
   {}
 
+  /**
+   * @brief Return (dynamic) dimension of output vector
+   */
   int values() const
   {
     return values_;
   }
 
+  /**
+   * @brief Functor form used in unsupported/AdolcForward
+   */
   template<typename Derived1, typename Derived2>
   void operator()(const Eigen::MatrixBase<Derived1> & x, Eigen::MatrixBase<Derived2> * y) const
   {
     * y = func_(x);
   }
 
+  /**
+   * @brief Functor form used in unsupported/NumericalDiff
+   */
   template<typename Derived1, typename Derived2>
   void operator()(const Eigen::MatrixBase<Derived1> & x, Eigen::MatrixBase<Derived2> & y) const
   {
     y = func_(x);
   }
 
+  /**
+   * @brief Functor form used in Ceres
+   */
   template<typename T>
   bool operator()(const T * x, T * y) const
   {
+    // TODO: expose dynamics input size
     Eigen::Map<const Eigen::Matrix<T, InputsAtCompileTime, 1>> x_map(x);
-    Eigen::Map<Eigen::Matrix<T, ValuesAtCompileTime, 1>> y_map(y);
+    Eigen::Map<Eigen::Matrix<T, ValuesAtCompileTime, 1>> y_map(y, values());
 
     y_map = func_(x_map);
 
