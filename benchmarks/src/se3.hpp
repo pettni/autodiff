@@ -7,7 +7,7 @@
 /**
  * @brief Bare-bones implementation of the SE(3) Lie Group
  *
- * For benchmarking purposes only, do not use in important code.
+ * For benchmarking purposes only---do not use in important code.
  */
 template<typename _Scalar>
 struct SE3

@@ -134,68 +134,38 @@ void run_tests()
 int main()
 {
   using AllTests = TypePack<
-    Constant<3>,
-    Constant<10>,
-    Constant<100>,
-    Constant<1000>,
-    ManyToOne<3>,
-    ManyToOne<10>,
-    ManyToOne<100>,
-    ManyToOne<1000>,
-    OneToMany<3>,
-    OneToMany<10>,
-    OneToMany<100>,
-    OneToMany<1000>,
-    ODE<3>,
-    ODE<10>,
-    ODE<30>,
-    NeuralNet<3>,
-    NeuralNet<10>,
-    NeuralNet<100>,
-    ReprojectionError<3>,
-    ReprojectionError<10>,
-    ReprojectionError<100>,
-    ReprojectionError<1000>,
-    Manipulator<3>,
-    Manipulator<10>,
-    Manipulator<100>,
-    Manipulator<1000>,
-    SE3ODE<3>,
-    SE3ODE<10>,
-    SE3ODE<100>,
-    SE3ODE<1000>
+    Constant<3>, Constant<10>, Constant<100>, Constant<1000>,
+    ManyToOne<3>, ManyToOne<10>, ManyToOne<100>, ManyToOne<1000>,
+    OneToMany<3>, OneToMany<10>, OneToMany<100>, OneToMany<1000>,
+    ODE<3>, ODE<10>, ODE<30>,
+    NeuralNet<3>, NeuralNet<10>, NeuralNet<100>,
+    ReprojectionError<3>, ReprojectionError<10>, ReprojectionError<100>, ReprojectionError<1000>,
+    Manipulator<3>, Manipulator<10>, Manipulator<100>, Manipulator<1000>,
+    SE3ODE<3>, SE3ODE<10>, SE3ODE<100>, SE3ODE<1000>
   >;
 
   using AllTestsNoODE = TypePack<
-    Constant<3>,
-    Constant<10>,
-    Constant<100>,
-    Constant<1000>,
-    ManyToOne<3>,
-    ManyToOne<10>,
-    ManyToOne<100>,
-    ManyToOne<1000>,
-    OneToMany<3>,
-    OneToMany<10>,
-    OneToMany<100>,
-    OneToMany<1000>,
-    NeuralNet<3>,
-    NeuralNet<10>,
-    NeuralNet<100>,
-    ReprojectionError<3>,
-    ReprojectionError<10>,
-    ReprojectionError<100>,
-    ReprojectionError<1000>,
-    Manipulator<3>,
-    Manipulator<10>,
-    Manipulator<100>,
-    Manipulator<1000>
+    Constant<3>, Constant<10>, Constant<100>, Constant<1000>,
+    ManyToOne<3>, ManyToOne<10>, ManyToOne<100>, ManyToOne<1000>,
+    OneToMany<3>, OneToMany<10>, OneToMany<100>, OneToMany<1000>,
+    NeuralNet<3>, NeuralNet<10>, NeuralNet<100>,
+    ReprojectionError<3>, ReprojectionError<10>, ReprojectionError<100>, ReprojectionError<1000>,
+    Manipulator<3>, Manipulator<10>, Manipulator<100>, Manipulator<1000>
   >;
+
+  using AllTestsNoSE3 = TypePack<
+    Constant<3>, Constant<10>, Constant<100>, Constant<1000>,
+    ManyToOne<3>, ManyToOne<10>, ManyToOne<100>, ManyToOne<1000>,
+    OneToMany<3>, OneToMany<10>, OneToMany<100>, OneToMany<1000>,
+    ODE<3>, ODE<10>, ODE<30>,
+    NeuralNet<3>, NeuralNet<10>, NeuralNet<100>
+  >;
+
 
   // these can run all tests (but do not necessarily succeed)
   run_tests<TypePack<
       AdeptTester,
-      AdolcTester,
+      AdolcTapelessTester,
       AutodiffFwdTester,
       CppADTester,
       CppADCGTester,
@@ -207,11 +177,15 @@ int main()
 
   // * Ceres can't handle ODE tests because no conversion double -> Jet (required inside boost)
   // * AutodiffRev times out on ODE tests
-  run_tests<TypePack<
-      AutodiffRevTester,
-      CeresTester
-    >,
+  run_tests<
+    TypePack<AutodiffRevTester, CeresTester>,
     AllTestsNoODE
+  >();
+
+  // Adolc can not handle Eigen quaterion-vector product
+  run_tests<
+    TypePack<AdolcTester>,
+    AllTestsNoSE3
   >();
 
   return 0;

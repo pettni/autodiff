@@ -71,7 +71,11 @@ struct OneToMany
   static constexpr std::size_t InputSize = 1;
 
   template<typename Derived>
-  Eigen::Matrix<typename Derived::Scalar, N, 1>
+  Eigen::Matrix<
+    typename Derived::Scalar,
+    Derived::RowsAtCompileTime == -1 ? -1 : static_cast<int>(N),
+    1
+  >
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
     using std::sin, std::cos;
@@ -172,14 +176,14 @@ struct NeuralNet
   Eigen::Matrix<typename Derived::Scalar, 1, 1>
   operator()(const Eigen::MatrixBase<Derived> & x) const
   {
-    auto z1 = (W1.template cast<typename Derived::Scalar>() * x.normalized()).eval();
-    auto a1 = z1.array().tanh().matrix().eval();
+    const auto z1 = (W1.template cast<typename Derived::Scalar>() * x.normalized()).eval();
+    const auto a1 = z1.array().tanh().matrix().eval();
 
-    auto z2 = (W2.template cast<typename Derived::Scalar>() * a1).eval();
-    auto a2 = z2.array().tanh().matrix().eval();
+    const auto z2 = (W2.template cast<typename Derived::Scalar>() * a1).eval();
+    const auto a2 = z2.array().tanh().matrix().eval();
 
-    auto z3 = (W3.template cast<typename Derived::Scalar>() * a2).eval();
-    auto a3 = z3.array().tanh().matrix().eval();
+    const auto z3 = (W3.template cast<typename Derived::Scalar>() * a2).eval();
+    const auto a3 = z3.array().tanh().matrix().eval();
 
     return Eigen::Matrix<typename Derived::Scalar, 1, 1>(
       (a3 - Eigen::Matrix<typename Derived::Scalar, n3, 1>::Ones()).squaredNorm()
@@ -206,7 +210,7 @@ public:
  *
  * f: R^6 -> R
  *
- * f(x)(2*i, 2*i+1) = ( x_C_i - proj(CM * (P_CW * exp(x)) * x_W_i) ) .^ 2
+ * f(x) = \sum_i ( x_C_i - proj(CM * (P_CW * exp(x)) * x_W_i) ) .^ 2
  *
  * where - x_C_i the i:th 2d pixel point
  *       - x_W_i the i:th 3d world point
@@ -218,7 +222,7 @@ struct ReprojectionError
 {
   static constexpr char name[] = "Reprojection";
   static constexpr std::size_t N = _N;
-  static constexpr std::size_t InputSize = 6;  //
+  static constexpr std::size_t InputSize = 6;
 
   ReprojectionError()
   {

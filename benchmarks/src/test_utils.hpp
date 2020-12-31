@@ -13,6 +13,8 @@
 
 #include "common.hpp"
 
+using namespace std::chrono_literals;
+
 
 template<typename Tester1, typename Tester2, typename Test>
 bool test_correctness()
@@ -35,7 +37,7 @@ bool test_correctness()
       tester1.run([&test](const auto & x) {return test(x);}, x, J1);
       tester2.run([&test](const auto & x) {return test(x);}, x, J2);
 
-      if (!J1.isApprox(J2, 1e-3)) {
+      if (!J1.isApprox(J2, 1e-2)) {
         std::cerr << "Different jacobians detected on " << Test::name << std::endl;
         std::cerr << "Jacobian from " << Tester1::name << std::endl;
         std::cerr << J1 << std::endl;
@@ -89,14 +91,14 @@ SpeedResult test_speed()
 
         setup_promise.set_value(std::make_tuple(std::string{}, cntr, end - beg));
       } catch (const std::exception & e) {
-        setup_promise.set_value(std::make_tuple(e.what(), 0, std::chrono::nanoseconds(0)));
+        setup_promise.set_value(std::make_tuple(e.what(), 0, 0ns));
       }
     });
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::this_thread::sleep_for(500ms);
   canceled.store(true);
 
-  if (setup_ftr.wait_for(std::chrono::seconds(20)) == std::future_status::ready) {
+  if (setup_ftr.wait_for(20s) == std::future_status::ready) {
     setup_thr.join();
     std::tie(res.exception, res.setup_iter, res.setup_time) = setup_ftr.get();
   } else {
@@ -127,14 +129,14 @@ SpeedResult test_speed()
         const auto end = std::chrono::high_resolution_clock::now();
         calc_promise.set_value(std::make_tuple(std::string{}, cntr, end - beg));
       } catch (const std::exception & e) {
-        calc_promise.set_value(std::make_tuple(e.what(), 0, std::chrono::nanoseconds(0)));
+        calc_promise.set_value(std::make_tuple(e.what(), 0, 0ns));
       }
     });
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+  std::this_thread::sleep_for(3s);
   canceled.store(true);
 
-  if (calc_ftr.wait_for(std::chrono::seconds(20)) == std::future_status::ready) {
+  if (calc_ftr.wait_for(20s) == std::future_status::ready) {
     calc_thr.join();
     std::tie(res.exception, res.calc_iter, res.calc_time) = calc_ftr.get();
   } else {

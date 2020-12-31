@@ -157,7 +157,6 @@ add_dependencies(run_speedtests
 )
 target_compile_definitions(run_speedtests
 PRIVATE
-    ADOLC_NO_TAPING                    # use ADOL-C with no-taping forward mode (usually faster)
     CPPAD_FOR_TMB                      # required for cppad-cg on ODE test
 )
 target_include_directories(run_speedtests

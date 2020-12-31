@@ -53,7 +53,6 @@ public:
   {
     Eigen::VectorXd x_dyn = x;
     auto j_ad = model->Jacobian(x_dyn);
-
     J = Eigen::Map<typename EigenFunctor<Func, Derived>::JacobianTypeRowMajor>(
       j_ad.data(), model->Range(), model->Domain()
     );

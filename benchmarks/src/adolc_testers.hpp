@@ -3,16 +3,16 @@
 
 #include <utility>
 
+# include <adolc/adolc.h>
+# include <unsupported/Eigen/AdolcForward>
+
 # include "common.hpp"
 
-#ifdef ADOLC_NO_TAPING
-
-# include <unsupported/Eigen/AdolcForward>
 
 /**
  * @brief Use ADOL-C in no-taping forward mode
  */
-class AdolcTester
+class AdolcTapelessTester
 {
 public:
   static constexpr char name[] = "ADOL-C-Tapeless";
@@ -36,10 +36,6 @@ public:
     func(x, &y, &J);
   }
 };
-
-#else  // ADOLC_NO_TAPING
-
-# include <adolc/adolc.h>
 
 
 /**
@@ -96,6 +92,7 @@ public:
       jac_rows[i] = Jrow.row(i).data();
     }
 
+    // NOTE: if return value is negative we have to re-tape
     jacobian(0, num_outputs, x.size(), x.data(), jac_rows);
 
     delete[] jac_rows;
@@ -105,8 +102,5 @@ public:
 private:
   int num_outputs;
 };
-
-#endif  // ADOLC_NO_TAPING
-
 
 #endif  // ADOLC_TESTERS_HPP_

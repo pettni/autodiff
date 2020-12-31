@@ -66,7 +66,7 @@ struct EigenFunctor
   template<typename T>
   bool operator()(const T * x, T * y) const
   {
-    // TODO: expose dynamics input size
+    // TODO: expose dynamic input size and add here
     Eigen::Map<const Eigen::Matrix<T, InputsAtCompileTime, 1>> x_map(x);
     Eigen::Map<Eigen::Matrix<T, ValuesAtCompileTime, 1>> y_map(y, values());
 
