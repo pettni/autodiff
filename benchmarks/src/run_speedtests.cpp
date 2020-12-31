@@ -28,6 +28,7 @@ OTHER BENCHMARKS (CODE)
 
 TODOS
 
+* Add Ceres v1.14
 * Add option for dynamic-sized tests
 
 AD TOOLS NOT IN BENCHMARK

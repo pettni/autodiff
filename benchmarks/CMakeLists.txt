@@ -141,9 +141,6 @@ else()
 endif()
 
 
-
-find_package(Ceres 2.0 REQUIRED PATHS ${LOCAL_INSTALL_DIR}/lib/cmake)
-
 add_executable(run_speedtests
     src/run_speedtests.cpp
 )
@@ -171,7 +168,6 @@ PRIVATE
 target_link_libraries(run_speedtests
     adept
     adolc
-    Ceres::ceres
     dl
     Eigen3::Eigen
     pthread
