@@ -89,14 +89,17 @@ public:
     const Eigen::PlainObjectBase<Derived> & x,
     typename EigenFunctor<Func, Derived>::JacobianType & J)
   {
-    double ** jac_rows = new double *[x.size()];
-    for (size_t i = 0; i < x.size(); i++) {
-      jac_rows[i] = J.row(i).data();
+    typename EigenFunctor<Func, Derived>::JacobianTypeRowMajor Jrow(num_outputs, x.size());
+
+    double ** jac_rows = new double *[num_outputs];
+    for (size_t i = 0; i < num_outputs; i++) {
+      jac_rows[i] = Jrow.row(i).data();
     }
 
     jacobian(0, num_outputs, x.size(), x.data(), jac_rows);
 
     delete[] jac_rows;
+    J = Jrow;
   }
 
 private:

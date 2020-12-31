@@ -29,9 +29,9 @@ public:
     typename EigenFunctor<Func, Derived>::JacobianTypeRowMajor Jrow;
 
     const Scalar * prms[1] = {x.data()};
-    double ** jac_cols = new double *[func.values()];
+    double ** jac_rows = new double *[func.values()];
     for (size_t i = 0; i < func.values(); i++) {
-      jac_cols[i] = Jrow.col(i).data();
+      jac_rows[i] = Jrow.row(i).data();
     }
 
     Scalar F{};
@@ -39,10 +39,10 @@ public:
       EigenFunctor<Func, Derived>::ValuesAtCompileTime,
       ceres::internal::StaticParameterDims<Derived::RowsAtCompileTime>
     >(
-      func, prms, func.values(), &F, jac_cols
+      func, prms, func.values(), &F, jac_rows
     );
 
-    delete[] jac_cols;
+    delete[] jac_rows;
 
     J = Jrow;
   }
